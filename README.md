@@ -2,7 +2,7 @@
 EVelution is a series of bioinformatics simulations. Bioreactor Twin is a digital twin designed for optimizing extracellular vesicle yield in industrial fed-batch bioreactors.
 
 
-# EVelution: Fed-Batch Bioreactor Digital Twin 🧬⚙️
+# EVelution: Fed-Batch Bioreactor Digital Twin
 **Powered by the Multi-Machinery Model of EV Biogenesis**
 
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
