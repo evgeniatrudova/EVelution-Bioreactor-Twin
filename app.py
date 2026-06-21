@@ -418,29 +418,25 @@ with r2c2:
         t1.markdown("Determines the 'sweet spot' for harvest duration. The inflection point occurs where incremental EV gain is offset by culture necrosis and byproduct toxicity.")
         t2.latex(r"\frac{d}{dt}Yield(t) = 0 \quad at \quad t_{optimal}")
 
-# --- THE FOOTER ---
-st.divider()
-
+# --- FOOTER---
 st.markdown("""
 <style>
-/* 1. Force the Footer Box to behave */
-.footer-box {
+
+.footer-wrapper {
     display: flex !important;
     flex-direction: row !important;
-    justify-content: space-between !important;
     align-items: flex-start !important;
+    justify-content: space-between !important;
     background-color: #1E1E2E !important;
     padding: 20px !important;
     border-radius: 8px !important;
-    position: relative !important;
 }
 
-/* 2. Force the Popover Button to be the tiny cube */
-/* We target the exact Streamlit button ID to override their default sizing */
+
 [data-testid="stPopover"] > button {
-    min-width: 20px !important;
-    width: 20px !important;
-    height: 20px !important;
+    min-width: 16px !important;
+    width: 16px !important;
+    height: 16px !important;
     padding: 0 !important;
     margin: 0 !important;
     border-radius: 2px !important;
@@ -452,46 +448,36 @@ st.markdown("""
     transition: all 0.3s ease !important;
 }
 
-/* 3. The Hover Effect */
+
 [data-testid="stPopover"] > button:hover {
     background-color: #D78A4D !important;
     border-color: #A66A3B !important;
 }
 
-/* 4. Hide default text inside the button */
-[data-testid="stPopover"] > button div { display: none !important; }
 
-/* 5. Ensure the container stays aligned */
-.academic-text {
-    flex: 1;
-    color: #A0A0B0;
-    font-size: 0.85em;
-}
+[data-testid="stPopover"] > button > div { display: none !important; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- THE RENDER ---
 with st.container():
-    st.markdown('<div class="footer-box">', unsafe_allow_html=True)
+    st.markdown('<div class="footer-wrapper">', unsafe_allow_html=True)
     
-    # Left Text Column
+    # Left Column: References
     st.markdown("""
-    <div class="academic-text">
-        <h4 style="color: #779ECB; margin-top: 0;">Traceability & Academic Source Verification:</h4>
-        <ul style="list-style-type: none; padding-left: 0;">
-            <li><b>[1] Core Engine:</b> <a href="https://stud.epsilon.slu.se/22206/" style="color: #779ECB;">Trudova (2026)</a></li>
-            <li><b>[2] MSCs:</b> <a href="https://doi.org/10.1371/journal.pone.0126715" style="color: #779ECB;">Liu et al. (2015)</a></li>
-            <li><b>[3] HEK293T:</b> <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC8469586/" style="color: #779ECB;">Furdui et al. (2021)</a></li>
-            <li><b>[4] CHO-K1:</b> <a href="https://doi.org/10.1007/s00253-017-8531-y" style="color: #779ECB;">Pan et al. (2017)</a></li>
+    <div style="color: #A0A0B0; font-size: 0.8em;">
+        <h4 style="color: #779ECB; margin-top: 0; margin-bottom: 10px;">Traceability & Academic Source Verification:</h4>
+        <ul style="list-style-type: none; padding-left: 0; margin: 0;">
+            <li>[1] Core Engine: <a href="https://stud.epsilon.slu.se/22206/" style="color: #779ECB;">Trudova (2026)</a></li>
+            <li>[2] MSCs: <a href="https://doi.org/10.1371/journal.pone.0126715" style="color: #779ECB;">Liu et al. (2015)</a></li>
+            <li>[3] HEK293T: <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC8469586/" style="color: #779ECB;">Furdui et al. (2021)</a></li>
+            <li>[4] CHO-K1: <a href="https://doi.org/10.1007/s00253-017-8531-y" style="color: #779ECB;">Pan et al. (2017)</a></li>
         </ul>
     </div>
     """, unsafe_allow_html=True)
     
-    # Right Cube (Popover)
+    # Right Column: The Cube (Wrapped in a popover)
     with st.popover(" "):
-        st.subheader("🚀 Roadmap")
-        st.write("Targeting: Cloud API, Sensor Integration, Sensitivity Intervals.")
-        
-    st.markdown('</div>', unsafe_allow_html=True)
-        
+        st.subheader("Roadmap")
+        st.write("")
+    
     st.markdown('</div>', unsafe_allow_html=True)
