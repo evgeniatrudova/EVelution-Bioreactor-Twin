@@ -133,7 +133,23 @@ with st.sidebar:
     
     st.divider()
     st.header("Yield Target")
-    target = st.number_input("Target Yield", value=1e15, format="%.1e")
+    # Split Scientific Notation Input
+    st.caption("Set target load for downstream processing:")
+    t_col1, t_col2 = st.columns(2)
+    
+    with t_col1:
+        # The base value (Mantissa)
+        target_base = st.number_input("Base", min_value=1.0, max_value=9.9, value=1.0, step=0.1)
+    
+    with t_col2:
+        # The scale (Exponent)
+        target_exp = st.number_input("Magnitude (10^x)", min_value=10, max_value=20, value=15, step=1)
+        
+    # 2. Logic Connection: Reconstruct the float for the validation engine
+    target = target_base * (10 ** target_exp)
+    
+    # Visual feedback to confirm the active parameter
+    st.markdown(f"<div style='text-align: right; color: #77DD77; font-size: 0.9em;'><b>Active Target: {target:.1e} EVs</b></div>", unsafe_allow_html=True)
     
     st.divider()
     st.header("Data")
