@@ -13,6 +13,7 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 
 # --- CORE BIOPHYSICAL ENGINE ---
 class BiogenesisEngine:
@@ -138,12 +139,44 @@ with cols[1]:
         b.write("Viability declines as a function of cumulative metabolic stress and mechanical impeller sheer. The slope represents the rate of culture necrosis.")
         m.latex(r"\frac{dV}{dt} = -(\kappa_{tox} + \tau_{shear})")
 
-# Graph 3: Sensitivity (Full Width)
-dur_range = range(12, 96, 6)
-sens_data = [model.run_simulation(o2, temp, ph, mix, d, s_o2, s_temp, s_ph)["Therapeutic EVs"].sum() * vol * 1000 * 0.78 * 0.62 for d in dur_range]
-fig3 = px.line(x=list(dur_range), y=sens_data, labels={'x': 'Duration (h)', 'y': 'Total Yield'})
-st.plotly_chart(fig3, use_container_width=True)
-with st.expander("Analysis: Yield Sensitivity"):
-    b, m = st.tabs(["Biology", "Model"])
-    b.write("This sensitivity analysis maps the 'sweet spot' of the batch duration. Yield plateaus or drops when duration exceeds cell lifespan.")
-    m.latex(r"Yield_{target} = \int_{0}^{t} \Phi(t) dt")
+# --- YIELD BRIDGE & SENSITIVITY ---
+st.divider()
+col_bridge, col_sens = st.columns(2)
+
+with col_bridge:
+    st.markdown("### The Yield-to-Value Bridge")
+    
+    # Calculate funnel stages based on your current true_val
+    # Note: true_val is already (Yield * 0.78 * 0.62)
+    raw_yield = true_val / (0.78 * 0.62)
+    purity_yield = true_val / 0.62
+    
+    fig_funnel = go.Figure(go.Funnel(
+        y=["Raw Target Yield", "Intact EVs (Purity)", "Functional Value"],
+        x=[raw_yield, purity_yield, true_val],
+        textinfo="value+percent previous",
+        marker={"color": ["#636EFA", "#EF553B", "#00CC96"]}
+    ))
+    
+    fig_funnel.update_layout(height=400, margin=dict(t=20, b=0, l=0, r=0))
+    st.plotly_chart(fig_funnel, use_container_width=True)
+    
+    with st.expander("Analysis: Yield-to-Value Bridge"):
+        tab_bio, tab_mod = st.tabs(["Biology", "Model"])
+        tab_bio.markdown("The bridge visualizes the loss cascade from crude bioreactor harvest to the final functional therapeutic product. It illustrates the 'bottlenecks' created by purification and loading efficiencies.")
+        tab_mod.latex(r"V_{final} = Yield_{raw} \cdot \eta_{purity} \cdot \phi_{consistency}")
+
+with col_sens:
+    st.markdown("### Yield Sensitivity Analysis")
+    dur_range = range(12, 96, 6)
+    sensitivity_data = [
+        model.run_simulation(o2, temp, ph, mix, d, s_o2, s_temp, s_ph)["Therapeutic EVs"].sum() * vol * 1000 * 0.78 * 0.62 
+        for d in dur_range
+    ]
+    fig_sens = px.line(x=list(dur_range), y=sensitivity_data, labels={'x': 'Duration (h)', 'y': 'Total Predicted Yield'})
+    st.plotly_chart(fig_sens, use_container_width=True)
+    
+    with st.expander("Analysis: Yield Sensitivity"):
+        tab_bio, tab_mod = st.tabs(["Biology", "Model"])
+        tab_bio.markdown("This sensitivity analysis maps the 'sweet spot' of the batch duration. Yield plateaus or drops when the duration exceeds the cell lifespan.")
+        tab_mod.latex(r"Yield_{target} = \int_{0}^{t} \Phi(t) dt")
