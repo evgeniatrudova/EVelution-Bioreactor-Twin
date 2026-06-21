@@ -181,11 +181,26 @@ m4.metric("Cargo Consistency", f"{dynamic_consistency*100:.1f}%")
 
 st.markdown("### Batch Success Evaluation")
 
-# Multi-Tier Validation Logic
+# 1. Bioinformatics Logic: Calculate metrics
 yield_achievement = (true_val / target) * 100
 quality_score = (dynamic_purity * dynamic_consistency) * 100 
 
-if yield_achievement >= 100:
+# 2. UX Logic: The Startup Detection
+# If all parameters are exactly at their default positions, trigger the Standby State
+is_startup = (
+    selected_cell == "Human MSCs (Bone Marrow)" and
+    vol == 50.0 and o2 == 21 and temp == 37 and ph == 7.4 and mix == 85 and dur == 48 and
+    target_base == 1.0 and target_exp == 15 and not manual_override
+)
+
+# 3. Multi-Tier Validation Logic
+if is_startup:
+    # THE STANDBY STATE (Blue / Neutral)
+    status_color, quality_color = "#779ECB", "#779ECB" 
+    status_icon = "💡"
+    status_text = "AWAITING OPTIMIZATION: Default baseline loaded. Adjust parameters to begin."
+
+elif yield_achievement >= 100:
     if quality_score >= 60.0:
         status_color, quality_color = "#77DD77", "#77DD77"
         status_icon = "✅"
@@ -203,6 +218,7 @@ else:
     status_icon = "📉"
     status_text = "DEFICIENT: Target volume not reached. Extend duration or adjust feeding."
 
+# UI Rendering: The Evaluation Card
 st.markdown(f"""
 <div style="background-color: #1E1E2E; padding: 20px; border-radius: 8px; border-left: 6px solid {status_color}; display: flex; align-items: center; justify-content: space-between;">
     <div style="flex: 1;">
@@ -220,7 +236,6 @@ st.markdown(f"""
     </div>
 </div>
 """, unsafe_allow_html=True)
-
 
 # --- 9. ANALYTICS GRID ---
 st.divider()
