@@ -418,66 +418,65 @@ with r2c2:
         t1.markdown("Determines the 'sweet spot' for harvest duration. The inflection point occurs where incremental EV gain is offset by culture necrosis and byproduct toxicity.")
         t2.latex(r"\frac{d}{dt}Yield(t) = 0 \quad at \quad t_{optimal}")
 
-# --- FOOTER---
-st.markdown("""
-<style>
+# --- THE FOOTER ---
+st.divider()
 
-.footer-wrapper {
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: flex-start !important;
-    justify-content: space-between !important;
-    background-color: #1E1E2E !important;
-    padding: 20px !important;
-    border-radius: 8px !important;
-}
-
-
-[data-testid="stPopover"] > button {
-    min-width: 16px !important;
-    width: 16px !important;
-    height: 16px !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    border-radius: 2px !important;
-    background-color: #2A2A3A !important;
-    border-top: 1px solid #10101A !important;
-    border-left: 1px solid #10101A !important;
-    border-right: 3px solid #000000 !important;
-    border-bottom: 3px solid #000000 !important;
-    transition: all 0.3s ease !important;
-}
-
-
-[data-testid="stPopover"] > button:hover {
-    background-color: #D78A4D !important;
-    border-color: #A66A3B !important;
-}
-
-
-[data-testid="stPopover"] > button > div { display: none !important; }
-</style>
-""", unsafe_allow_html=True)
-
+# RENDER FOOTER LAYOUT
 with st.container():
-    st.markdown('<div class="footer-wrapper">', unsafe_allow_html=True)
-    
-    # Left Column: References
+    # We use a flexbox container to lock the text to the left and cube to the right
     st.markdown("""
-    <div style="color: #A0A0B0; font-size: 0.8em;">
-        <h4 style="color: #779ECB; margin-top: 0; margin-bottom: 10px;">Traceability & Academic Source Verification:</h4>
-        <ul style="list-style-type: none; padding-left: 0; margin: 0;">
-            <li>[1] Core Engine: <a href="https://stud.epsilon.slu.se/22206/" style="color: #779ECB;">Trudova (2026)</a></li>
-            <li>[2] MSCs: <a href="https://doi.org/10.1371/journal.pone.0126715" style="color: #779ECB;">Liu et al. (2015)</a></li>
-            <li>[3] HEK293T: <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC8469586/" style="color: #779ECB;">Furdui et al. (2021)</a></li>
-            <li>[4] CHO-K1: <a href="https://doi.org/10.1007/s00253-017-8531-y" style="color: #779ECB;">Pan et al. (2017)</a></li>
-        </ul>
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; 
+                background-color: #1E1E2E; padding: 20px; border-radius: 8px; position: relative;">
+        
+        <div style="color: #A0A0B0; font-size: 0.8em; flex: 1;">
+            <h4 style="color: #779ECB; margin-top: 0; margin-bottom: 10px;">Traceability & Academic Source Verification:</h4>
+            <ul style="list-style-type: none; padding-left: 0; margin: 0;">
+                <li>[1] Core Engine: <a href="https://stud.epsilon.slu.se/22206/" style="color: #779ECB;">Trudova (2026)</a></li>
+                <li>[2] MSCs: <a href="https://doi.org/10.1371/journal.pone.0126715" style="color: #779ECB;">Liu et al. (2015)</a></li>
+                <li>[3] HEK293T: <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC8469586/" style="color: #779ECB;">Furdui et al. (2021)</a></li>
+                <li>[4] CHO-K1: <a href="https://doi.org/10.1007/s00253-017-8531-y" style="color: #779ECB;">Pan et al. (2017)</a></li>
+            </ul>
+        </div>
+        
+        <div id="cube-anchor" style="width: 20px;"></div>
     </div>
     """, unsafe_allow_html=True)
-    
-    # Right Column: The Cube (Wrapped in a popover)
+
+    # Popover acts as the button - placing it here renders it inside the container
     with st.popover(" "):
-        st.subheader("Roadmap")
-        st.write("")
+        st.subheader("🚀 Roadmap")
+        st.write("Targeting: Cloud API, Sensor Integration, Sensitivity Intervals.")
+
+# --- FINAL CSS OVERRIDE ---
+# This forces the button to shrink and position correctly, ignoring Streamlit defaults
+st.markdown("""
+<style>
+    /* 1. Force the popover button to shrink to 16px */
+    [data-testid="stPopover"] > button {
+        position: absolute !important;
+        top: 20px !important;
+        right: 20px !important;
+        width: 16px !important;
+        height: 16px !important;
+        padding: 0 !important;
+        background-color: #2A2A3A !important;
+        border-top: 1px solid #10101A !important;
+        border-left: 1px solid #10101A !important;
+        border-right: 3px solid #000000 !important;
+        border-bottom: 3px solid #000000 !important;
+        border-radius: 2px !important;
+        transition: all 0.3s ease !important;
+    }
+
+    /* 2. Eevee Orange hover effect */
+    [data-testid="stPopover"] > button:hover {
+        background-color: #D78A4D !important;
+        border-color: #A66A3B !important;
+    }
+
+    /* 3. Kill the arrow */
+    [data-testid="stPopover"] > button > div { display: none !important; }
+</style>
+""", unsafe_allow_html=True)
     
     st.markdown('</div>', unsafe_allow_html=True)
