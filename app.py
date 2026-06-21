@@ -93,7 +93,22 @@ with st.expander("Model Foundation & Biophysical Formulas"):
         st.latex(r"V_{final} = \text{Yield} \times \text{Purity} \times \text{Consistency}")
 
 st.divider()
+# --- EXPLANATION EXPANDER ---
+with st.expander("💡 Understanding Dashboard Metrics"):
+    tab_bio, tab_mod = st.tabs(["Biological Context", "Mathematical Model"])
 
+    with tab_bio:
+        st.markdown("""
+        * **Yield Performance:** The total amount of therapeutic EVs expected after downstream processing. This accounts for the cumulative production over the duration, limited by cell viability.
+        * **Harvest Conc:** The instantaneous concentration of EVs at the end of the simulation, representing the bulk harvest density before purification.
+        * **Downstream Purity:** A fixed efficiency constant (78%) representing the loss of EVs during typical tangential flow filtration (TFF) and chromatography steps.
+        * **Cargo Consistency:** The quality index (62%) representing the loading efficiency of therapeutic payload into the EVs produced under current bioreactor conditions.
+        """)
+
+    with tab_mod:
+        st.markdown("The final yield is calculated by integrating the production flux over the total bioreactor run time, adjusted for physical recovery and loading factors:")
+        st.latex(r"Yield_{final} = \left( \sum_{t=0}^{t_{dur}} \Phi_{thera}(t) \times Vol \right) \times \eta_{purity} \times \phi_{consistency}")
+        st.markdown(f"Current constants: $\eta_{purity} = 0.78$, $\phi_{consistency} = 0.62$.")
 # --- SIDEBAR: REORGANIZED HIERARCHY ---
 with st.sidebar:
     st.header("Cell Line Sensitivity")
