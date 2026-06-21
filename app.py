@@ -71,15 +71,24 @@ st.title("EVelution Bioreactor Optimisation")
 st.caption("Multi-Machinery Model (MMModel) | Default Cell Line: MSC | Author: Evgenia Trudova")
 
 # Metric Definition Expander
-with st.expander("🔬 Model Infrastructure & Definitions"):
-    col1, col2 = st.columns(2)
-    with col1:
-        st.markdown("**Yield Performance**: The total quantity of therapeutic EVs projected post-DSP. Calculated by integrating hourly production flux ($\Phi$) over the culture duration, scaled by volume, and adjusted for recovery/loading efficiency.")
-        st.markdown("**Harvest Concentration**: Instantaneous density of EVs in the bioreactor at the moment of harvest ($\Phi_{final}$). This dictates the upstream input for downstream purification.")
-    with col2:
-        st.markdown("**Downstream Purity**: Represents the efficiency of the purification workflow (TFF/Chromatography). It is modeled as a recovery coefficient ($\eta_{purity}$) defining the fraction of vesicles retained.")
-        st.markdown("**Cargo Consistency**: A quality index denoting the percentage of EVs that contain the active therapeutic payload. This coefficient ($\phi_{consistency}$) corrects the raw yield for mis-loaded vesicles.")
-   
+ with st.expander("Formula Library", expanded=False):
+    # Tabbed view keeps the UI clean and avoids 'wall of text'
+    tab_bio, tab_math = st.tabs(["Biology (Context)", "Model (Manual Calc)"])
+
+    with tab_bio:
+        st.markdown("""
+        * **Yield Performance**: Total therapeutic EV quantity projected post-DSP. Calculated by integrating hourly production flux ($\Phi$) over the culture duration, scaled by volume.
+        * **Harvest Concentration**: Instantaneous density of EVs in the bioreactor at the moment of harvest ($\Phi_{final}$). Dictates the upstream input load for downstream purification.
+        * **Downstream Purity**: Represents the success rate of the purification workflow (TFF/Chromatography). Modeled as a recovery coefficient ($\eta_{purity}$).
+        * **Cargo Consistency**: Quality index denoting the percentage of EVs that contain the active therapeutic payload ($\phi_{consistency}$).
+        """)
+
+    with tab_math:
+        st.markdown("### Student Calculation Guide")
+        st.latex(r"1. \text{ Yield Performance: } Y_{perf} = \left( \sum_{t=1}^{T} \Phi(t) \cdot V_{react} \right) \cdot \eta_{purity} \cdot \phi_{consistency}")
+        st.latex(r"2. \text{ Harvest Conc: } \Phi_{final} = \Phi(t_{harvest})")
+        st.latex(r"3. \text{ Purity: } \eta_{purity} = \frac{EV_{purified}}{EV_{crude}}")
+        st.latex(r"4. \text{ Consistency: } \phi_{consistency} = \frac{EV_{loaded}}{EV_{total}}")
 
 # Sidebar
 with st.sidebar:
