@@ -16,20 +16,21 @@ EVelution is a series of bioinformatics simulations. Bioreactor Twin is a digita
   <img width="1852" height="777" alt="Evelution Bio App" src="https://github.com/user-attachments/assets/ff37be63-63e1-4fee-8407-3510ed58de5c" />
 </a>
 
-## Overview
-**EVelution** is a time-series bioinformatics simulation and digital twin designed for optimizing Extracellular Vesicle (EV) yield in industrial fed-batch bioreactors. 
 
-Bridging the gap between molecular biology and bioprocess engineering, this tool replaces upstream trial-and-error with mathematical precision. By simulating the environmental stressors that trigger EV shedding (hypoxia, thermal shifts, and acidic environments), EVelution predicts the exact "Sweet Spot" where therapeutic EV production is maximized before cellular viability crashes.
+EVelution-bio is a digital twin and predictive bioinformatics tool designed for the optimization of extracellular Vesicle biomanufacturing. EVelution-bio bridges upstream cell biology and downstream process engineering, helping reduce the costs of physical trial-and-error. By simulating the precise environmental stressors  (hypoxia, thermal shifts, and hydrodynamic shear), the application calculates where therapeutic yield is maximized before cellular viability collapses.
 
-## The Multi-Machinery Model
-Current biomanufacturing often assumes EV secretion is a static baseline. The **Multi-Machinery Model** challenges this, proposing that EV biogenesis is a dynamically regulated survival network. EVelution separates EV production into:
-1. **The Gradient Baseline:** Constitutive secretion of *Therapeutic EVs* based on metabolic health.
-2. **Acute Stress Machinery:** Explosive shedding of *Stress-Altered EVs* triggered only when specific environmental thresholds (O2, Temp, pH) are crossed.
+The bioprocessing industry currently suffers from a critical blind spot: optimizing scale-up runs based on raw NTA (Nanoparticle Tracking Analysis) scatter counts. EVelution introduces the Yield-to-Value Bridge, a mathematical framework that deconstructs raw particle counts by severely penalizing the batch for empty cargo and apoptotic debris. Instead of showing a deceptive "total count," EVelution tracks the True Functional Value—isolating only the structurally intact, therapeutically aligned EVs that will survive downstream filtration and chromatography.
 
-## Key Features
-* **48-Hour Time-Series Kinetics:** Simulates dynamic environmental shifts, oxygen depletion, and EV accumulation over a standard fed-batch run.
-* **Spatial Zonal Mixing:** Accounts for hardware limitations (impeller speed) by simulating hypoxic/acidic "Dead Zones" alongside well-mixed zones.
-* **Cargo Consistency Tracking:** Mathematically differentiates between desired therapeutic cargo and stress-altered survival EVs.
-* **Downstream Purity Penalties:** Models the exponential spike in apoptotic bodies as cell viability drops, calculating the direct impact on downstream filtration and Cost of Goods (COGs).
-* **Machine-Learning Ready Architecture:** Built with decoupled, parameterized biological constants ready for `scipy.optimize` fitting against physical Nanoparticle Tracking Analysis (NTA) lab data.
+Current scale-up strategies often falsely assume EV secretion is a static baseline. The underlying Multi-Machinery Model challenges this by mathematically modeling biogenesis as a dynamically regulated, multi-pathway survival network.
+
+Uses: 
+The "Reality Check"
+Bioprocess engineers often develop high-yield protocols in wet lab flasks that fail when scaled up. 
+Engineers can input their target yield and the specific bioreactor volume to see if their process is physically achievable. The app functions as a "sanity check" to determine if they need to increase tank volume or refine their feeding strategy, preventing the waste.
+
+QC Troubleshooting
+When a batch fails downstream quality control, the root cause is often "invisible" because the NTA machine only counts particles—it doesn't distinguish between therapeutic EVs and apoptotic debris.Engineers can upload historical CSV run data into the app. By overlaying physical data with the digital twin's kinetic predictions, they can pinpoint exactly which hour the "Death Cliff" occurred. This identifies whether the batch was ruined by an oxygen-starved "dead zone" or if it was ruined by over-agitation creating hydrodynamic shear.
+
+
+
 
