@@ -420,3 +420,41 @@ st.markdown("""
     </div>
 </div>
 """, unsafe_allow_html=True)
+
+if 'show_roadmap' not in st.session_state:
+    st.session_state.show_roadmap = False
+
+def toggle_roadmap():
+    st.session_state.show_roadmap = not st.session_state.show_roadmap
+
+# --- 2. THE FOOTER CSS & CUBE ---
+# We use a base64 encoded SVG for the pixel cube to keep it light
+pixel_cube_svg = """
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect width="24" height="24" fill="#FFB90F"/> <rect x="4" y="4" width="16" height="16" fill="#FFA500" stroke="#CC8400" stroke-width="1"/>
+</svg>
+"""
+
+st.html(f"""
+<style>
+    .footer-cube {{
+        position: fixed;
+        bottom: 10px;
+        left: 10px;
+        cursor: pointer;
+        z-index: 9999;
+    }}
+</style>
+<div class="footer-cube" onclick="window.parent.postMessage('toggle_roadmap', '*')">
+    {pixel_cube_svg}
+</div>
+""")
+
+# --- 3. THE POP-UP WINDOW (Gamified Roadmap) ---
+if st.session_state.show_roadmap:
+    with st.popover("Roadmap & Support", expanded=True):
+        st.subheader("EVelution Development Roadmap")
+        
+        
+        if st.button("Close"):
+            st.session_state.show_roadmap = False
