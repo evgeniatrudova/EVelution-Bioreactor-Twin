@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 
-# --- CORE BIOPHYSICAL ENGINE ---
+# --- CORE BIOPHYSICAL ENGINE (Thesis Formulas) ---
 class BiogenesisEngine:
     """Implements the Multi-Machinery Model (MMModel) derived from the thesis."""
     @staticmethod
@@ -39,10 +39,11 @@ class BiogenesisEngine:
         gibbs = np.exp(-dG / (R_gas * T0))
         pH_mod = 1 + (0.5 * (10**(-ph) / 10**(-pH0))**2) / (0.1**2 + (10**(-ph) / 10**(-pH0))**2)
         
+        # Integration
         flux = base_rate * (lambda_hyp**s_o2) * (thermal_flux**s_temp) * ((gibbs * pH_mod)**s_ph)
         return max(0, flux)
 
-# --- BIOREACTOR SIMULATION ---
+# --- BIOREACTOR SIMULATION MODEL ---
 class FedBatchBioreactorModel:
     def __init__(self):
         self.base_rate = 1.2e9
@@ -52,16 +53,16 @@ class FedBatchBioreactorModel:
         history = {"Hour": [], "Therapeutic EVs": [], "Stress-Altered EVs": [], "Apoptotic Impurities": [], "Cell Viability (%)": []}
         
         for hour in range(1, duration_hours + 1):
-            # Calculate total flux
-            total_rate = BiogenesisEngine.calc_flux(init_o2, target_temp, target_ph, s_o2, s_temp, s_ph, self.base_rate)
+            # Calculate flux using Thesis-derived Engine
+            rate = BiogenesisEngine.calc_flux(init_o2, target_temp, target_ph, s_o2, s_temp, s_ph, self.base_rate)
             
-            # Damage/Shear
+            # Damage calculation
             shear = ((mixing_homogeneity - 85.0)**1.5 * 0.1) if mixing_homogeneity > 85 else 0
             viability = max(0, viability - (0.5 + shear))
             
             # Partitioning fluxes
-            thera = total_rate * (viability / 100)
-            stress = total_rate * ((100 - viability) / 100) * 0.3
+            thera = rate * (viability / 100)
+            stress = rate * ((100 - viability) / 100) * 0.3
             apop = self.base_rate * ((100 - viability) / 100) * 5
             
             history["Hour"].append(hour)
@@ -94,16 +95,16 @@ with st.expander("Model Foundation & Biophysical Formulas"):
 
 st.divider()
 
-# --- SIDEBAR ---
+# --- SIDEBAR: REORGANIZED HIERARCHY ---
 with st.sidebar:
-    st.header("Calibration")
+    st.header("1. Calibration")
     s_o2 = st.slider("Hypoxia Sensitivity", 0.0, 2.0, 1.2)
     s_temp = st.slider("Thermal Sensitivity", 0.0, 2.0, 0.8)
     s_ph = st.slider("pH Sensitivity", 0.0, 2.0, 0.9)
     
     st.divider()
     
-    st.header("Experimental Parameters")
+    st.header("2. Experimental Parameters")
     vol = st.number_input("Volume (L)", value=50.0)
     o2 = st.slider("Oxygen (%)", 0.0, 21.0, 21.0)
     temp = st.slider("Temp (°C)", 30.0, 45.0, 37.0)
@@ -113,36 +114,34 @@ with st.sidebar:
     
     st.divider()
     
-    st.header("Desired Yield")
-    target_clinical_yield = st.number_input("Desired Yield (EVs)", value=1e15, step=1e14, format="%.1e")
+    st.header("3. Desired Yield")
+    target_clinical_yield = st.number_input("Desired Target Yield (EVs)", value=1e15, step=1e14, format="%.1e")
     
     st.divider()
     
-    st.header("Data Management")
+    st.header("4. Data Management")
     st.file_uploader("Upload Run Data (CSV)", type=["csv"])
     if st.button("Export to PDF Report"):
         st.info("Generating report...")
 
-# --- SIMULATION ---
+# --- SIMULATION & CALCULATIONS ---
 model = FedBatchBioreactorModel()
 df = model.run_simulation(o2, temp, ph, mix, dur, s_o2, s_temp, s_ph)
 
-# --- DASHBOARD RENDER ---
+# Final Metrics
+final_thera = df["Therapeutic EVs"].iloc[-1] * vol * 1000
+true_val = final_thera * 0.78 * 0.62
 completion_pct = (true_val / target_clinical_yield) * 100
 goal_delta = true_val - target_clinical_yield
 
-# Metric Row
+# --- DASHBOARD RENDER ---
 col1, col2, col3, col4 = st.columns(4)
-col1.metric(
-    "Yield Performance", 
-    f"{true_val:.2e}", 
-    f"{goal_delta:+.1e} vs Goal"
-)
+col1.metric("Yield Performance", f"{true_val:.2e}", f"{goal_delta:+.1e} vs Goal")
 col2.metric("Harvest Conc", f"{df['Therapeutic EVs'].iloc[-1]:.2e} ev/mL")
-col3.metric("Downstream Purity", f"{purity*100:.1f}%")
-col4.metric("Cargo Consistency", f"{consistency*100:.1f}%")
+col3.metric("Downstream Purity", "78.0%")
+col4.metric("Cargo Consistency", "62.0%")
 
-# Progress Bar & Status Banner (The "UX fix")
+# Progress Bar & Status Banner
 st.markdown(f"**Goal Progress: {completion_pct:.1f}%**")
 st.progress(min(completion_pct / 100, 1.0))
 
@@ -150,6 +149,8 @@ if completion_pct >= 100:
     st.success(f"Success: Configuration meets clinical yield target of {target_clinical_yield:.1e} EVs.")
 else:
     st.warning(f"Configuration shortfall: {abs(goal_delta):.1e} EVs below target. Adjust temperature or duration to optimize yield.")
+
+st.divider()
 
 # --- GRAPHS ---
 col_left, col_right = st.columns(2)
@@ -159,9 +160,9 @@ with col_left:
     st.plotly_chart(fig, use_container_width=True)
     
     with st.expander("Explore Logic"):
-        tab1, tab2 = st.tabs(["Biology", "Model"])
-        tab1.markdown("The graph illustrates the divergence between therapeutic biogenesis and necrotic debris accumulation. Environmental stress forces a shift from high-fidelity secretion to chaotic survival-based vesicle shedding.")
-        tab2.markdown(r"$$ \text{Total Flux} = \Phi_{Therapeutic} + \Phi_{Stress} + \Phi_{Apoptotic} $$")
+        tab_bio, tab_mod = st.tabs(["Biology", "Model"])
+        tab_bio.markdown("Therapeutic yield decays as metabolic stress increases. Apoptotic debris eventually dominates the harvest profile.")
+        tab_mod.markdown(r"$\Phi_{total} = \Phi_{Therapeutic} + \Phi_{Stress} + \Phi_{Apoptotic}$")
 
 with col_right:
     st.markdown("### Cellular Viability")
@@ -169,6 +170,6 @@ with col_right:
     st.plotly_chart(fig2, use_container_width=True)
     
     with st.expander("Explore Membrane Degradation"):
-        tab1, tab2 = st.tabs(["Biology", "Model"])
-        tab1.markdown("Viability decline tracks cumulative necrotic damage resulting from toxic buildup and physical shear. This slope identifies the batch's 'Death Cliff' threshold.")
-        tab2.markdown(r"$$ \frac{dV}{dt} = -(\kappa_{tox} + \tau_{shear}) $$")
+        tab_bio, tab_mod = st.tabs(["Biology", "Model"])
+        tab_bio.markdown("Cumulative necrosis results from toxic byproduct accumulation and physical impeller stress. The threshold represents the 'Death Cliff'.")
+        tab_mod.markdown(r"$\frac{dV}{dt} = -(\kappa_{tox} + \tau_{shear})$")
