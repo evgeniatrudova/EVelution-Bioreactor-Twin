@@ -208,7 +208,7 @@ quality_score = (dynamic_purity * dynamic_consistency) * 100
 # --- 8. SIDEBAR DATA EXPORT (Now it has the math it needs!) ---
 with st.sidebar:
     st.divider()
-    st.header("📁 Data & Benchmarking")
+    st.header("Data & Benchmarking")
     
     st.markdown("**Export Current Simulation**")
     pdf_bytes = generate_qms_pdf(
@@ -225,7 +225,7 @@ with st.sidebar:
     st.markdown("<br>", unsafe_allow_html=True)
     
     st.markdown("**Historical Benchmarking**")
-    st.info("💡 **Golden Batch Overlay:** Drop a CSV of your best historical run here. The engine will project it as a dashed 'ghost line' on your main graph so you can optimize against it in real-time.")
+    st.info("Drop a CSV of your best historical run here. The engine will project it as a dashed 'ghost line' on your main graph so you can optimize against it in real-time.")
     
     uploaded_file = st.file_uploader(
         "Upload History File (.csv)", 
