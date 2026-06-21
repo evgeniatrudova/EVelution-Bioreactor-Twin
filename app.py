@@ -80,26 +80,8 @@ class FedBatchBioreactorModel:
             history["Cell Viability (%)"].append(viability)
         return pd.DataFrame(history)
 
-# --- 4. ADVANCED PDF GENERATOR ---
-def insert_pdf_graph(pdf, title, fig, description):
-    """Helper function to cleanly render Plotly graphs into the PDF."""
-    pdf.set_font("Helvetica", "B", 12)
-    pdf.set_text_color(0, 0, 0)
-    pdf.cell(0, 10, title, ln=True)
-    pdf.set_font("Helvetica", "I", 9)
-    pdf.set_text_color(100, 100, 100)
-    pdf.multi_cell(0, 5, description)
-    pdf.ln(2)
-    
-    # Capture the plotly figure as a high-res image byte stream using Kaleido
-    img_bytes = fig.to_image(format="png", engine="kaleido", scale=2, width=800, height=400)
-    img_buffer = io.BytesIO(img_bytes)
-    
-    # Insert into PDF (w=190 fills the A4 page width nicely)
-    pdf.image(img_buffer, w=190)
-    pdf.ln(5)
-
-def generate_qms_pdf(cell_line, vol, dur, target, yield_val, purity, consistency, q_score, figs):
+# --- 4. ADVANCED PDF GENERATOR (Text & Data Only) ---
+def generate_qms_pdf(cell_line, vol, dur, target, yield_val, purity, consistency, q_score):
     pdf = FPDF()
     pdf.add_page()
     
@@ -147,25 +129,8 @@ def generate_qms_pdf(cell_line, vol, dur, target, yield_val, purity, consistency
     pdf.set_font("Helvetica", "B", 11)
     pdf.cell(0, 10, f"STATUS: {status}", ln=True)
     
-    # --- PAGE 2: PROCESS ANALYTICS ---
-    pdf.add_page()
-    pdf.set_font("Helvetica", "B", 14)
-    pdf.set_text_color(119, 158, 203)
-    pdf.cell(0, 10, "Process Diagnostics & Analytics", ln=True)
-    pdf.line(10, 20, 200, 20)
-    pdf.ln(5)
-    
-    insert_pdf_graph(pdf, "A. Process Accumulation", figs['accum'], "Tracks therapeutic accumulation versus impurity buildup over time. Includes benchmark overlay if active.")
-    insert_pdf_graph(pdf, "B. Cellular Viability", figs['viab'], "Tracks culture health. Viability decline signifies the transition from growth to apoptotic phase.")
-    
-    # --- PAGE 3: YIELD ANALYTICS ---
-    pdf.add_page()
-    insert_pdf_graph(pdf, "C. Yield-to-Value Bridge", figs['funnel'], "Visualizes the mass balance and cumulative yield loss across downstream purification stages.")
-    insert_pdf_graph(pdf, "D. Yield Sensitivity Analysis", figs['sens'], "Determines the optimal harvest window by balancing EV gain against toxicity buildup.")
-    
     return bytes(pdf.output())
-
-
+    
 # --- 5. APP UI HEADER ---
 st.title("EVelution Bioreactor Optimisation")
 st.markdown("""
@@ -299,9 +264,9 @@ with st.sidebar:
     st.markdown("**Export Current Simulation**")
     pdf_bytes = generate_qms_pdf(
         cell_line=selected_cell, vol=vol, dur=dur, target=target,
-        yield_val=true_val, purity=dynamic_purity, consistency=dynamic_consistency, q_score=quality_score,
-        figs=report_figs
+        yield_val=true_val, purity=dynamic_purity, consistency=dynamic_consistency, q_score=quality_score
     )
+    
     st.download_button(
         label="Download PDF",
         data=pdf_bytes,
