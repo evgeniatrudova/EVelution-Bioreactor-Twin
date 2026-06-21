@@ -146,19 +146,28 @@ with row1_col2:
         tab_bio.markdown("Viability declines due to cumulative metabolic stress and mechanical impeller shear, identifying the culture 'Death Cliff'.")
         tab_mod.latex(r"\frac{dV}{dt} = -(\kappa_{tox} + \tau_{shear})")
 
+
+# Define common layout parameters
+fixed_height = 400
+fixed_margin = dict(t=30, b=0, l=10, r=10)
+
 # 3. Yield-to-Value Bridge (Row 2, Left)
 with row2_col1:
     st.markdown("### Yield-to-Value Bridge")
     raw_yield = true_val / (0.78 * 0.62)
     purity_yield = true_val / 0.62
+    
     fig_funnel = go.Figure(go.Funnel(
         y=["Raw Target Yield", "Intact EVs (Purity)", "Functional Value"],
         x=[raw_yield, purity_yield, true_val],
         textinfo="value+percent previous",
         marker={"color": ["#636EFA", "#EF553B", "#00CC96"]}
     ))
-    fig_funnel.update_layout(height=400, margin=dict(t=20, b=0, l=0, r=0))
+    
+    # Enforce standard dimensions
+    fig_funnel.update_layout(height=fixed_height, margin=fixed_margin)
     st.plotly_chart(fig_funnel, use_container_width=True)
+    
     with st.expander("Explore Logic"):
         tab_bio, tab_mod = st.tabs(["Biology", "Model"])
         tab_bio.markdown("Visualizes the loss cascade from crude bioreactor harvest to the final functional therapeutic product.")
@@ -172,8 +181,13 @@ with row2_col2:
         model.run_simulation(o2, temp, ph, mix, d, s_o2, s_temp, s_ph)["Therapeutic EVs"].sum() * vol * 1000 * 0.78 * 0.62 
         for d in dur_range
     ]
+    
     fig_sens = px.line(x=list(dur_range), y=sens_data, labels={'x': 'Duration (h)', 'y': 'Total Yield'})
+    
+    # Enforce standard dimensions to match the funnel
+    fig_sens.update_layout(height=fixed_height, margin=fixed_margin)
     st.plotly_chart(fig_sens, use_container_width=True)
+    
     with st.expander("Explore Logic"):
         tab_bio, tab_mod = st.tabs(["Biology", "Model"])
         tab_bio.markdown("Maps the batch duration 'sweet spot' where yield is maximized before cell necrosis dominates.")
