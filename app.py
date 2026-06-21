@@ -16,29 +16,30 @@ import plotly.graph_objects as go
 import plotly.express as px
 from io import BytesIO
 
+# --- 1. THEME & CONFIGURATION ---
+st.set_page_config(page_title="EVelution Bioreactor Twin", layout="wide")
+
+# CSS Injection for Theme
 st.markdown("""
 <style>
-    /* Global Primary Accent */
     :root {
-        --primary-color: #779ECB; /* Professional Blue */
+        --primary-color: #779ECB;
+        --background-color: #0E1117;
+        --secondary-background-color: #1E1E2E;
+        --text-color: #E0E0E0;
     }
-
-    /* Force the slider handle and bar to Blue in both Light and Dark mode */
-    .stSlider [data-baseweb="slider"] > div > div > div > div, 
-    .stSlider [data-baseweb="slider"] > div > div > div > div > div {
-        background-color: #779ECB !important;
-    }
-    
-    /* Ensure radio buttons and progress bars match */
-    .stRadio [role="radiogroup"] > label:first-of-type > div:first-of-type {
-        border-color: #779ECB !important;
-    }
-    
-    /* Clean up headers */
-    #MainMenu {visibility: hidden;} 
-    footer {visibility: hidden;}
+    .stSlider [data-baseweb="slider"] > div > div > div > div { background-color: #779ECB !important; }
+    #MainMenu {visibility: hidden;} footer {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
+
+# --- 2. GLOBAL CONSTANTS (Defined BEFORE use) ---
+fixed_height = 400
+fixed_margin = dict(t=40, b=10, l=20, r=20)
+C_GREEN = "#77DD77"
+C_BLUE = "#779ECB"
+C_PURPLE = "#B39EB5"
+C_STAR = "#E39777"
 # --- 2. CORE ENGINE ---
 class BiogenesisEngine:
     @staticmethod
