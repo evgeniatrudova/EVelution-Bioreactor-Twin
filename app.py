@@ -25,6 +25,15 @@ st.markdown("""
     :root { --primary-color: #779ECB; }
     .stSlider [data-baseweb="slider"] > div > div > div > div { background-color: #779ECB !important; }
     #MainMenu {visibility: hidden;} footer {visibility: hidden;}
+    
+    /* UX FIX: Force disabled buttons to remain highly visible */
+    .stButton > button[disabled] {
+        opacity: 0.85 !important;           /* Boosts visibility significantly */
+        border: 1px solid #4B4B60 !important; /* Keeps the outline crisp */
+        color: #B39EB5 !important;          /* Uses your theme's muted purple/grey for text */
+        background-color: transparent !important;
+        cursor: not-allowed !important;     /* Shows the 'stop' cursor so they know it's off */
+    }
 </style>
 """, unsafe_allow_html=True)
 
