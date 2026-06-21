@@ -415,8 +415,14 @@ st.markdown("""
     <b>[3] HEK293T:</b> Furdui et al. (2021). <i>Enhancement of Transgene Expression by Mild Hypothermia.</i> Biotechnol Prog. <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC8469586/" target="_blank" style="color: #779ECB;">PMC8469586</a><br>
     <b>[4] CHO-K1:</b> Pan et al. (2017). <i>Metabolic characterization of a CHO cell size increase phase.</i> BMC Biotechnol. <a href="https://doi.org/10.1007/s00253-017-8531-y" target="_blank" style="color: #779ECB;">https://doi.org/10.1007/s00253-017-8531-y</a><br>
     <br>
-    <div style="text-align: center; margin-top: 15px;">
-        <i>EVelution-bio Digital Twin Engine | Engineered for QMS-Compliant Bioprocess Optimization</i>
+    <div style="text-align: left; color: #A0A0B0; font-size: 0.85em; padding: 20px; background-color: #1E1E2E; border-radius: 8px; position: relative;">
+    
+    <div style="position: absolute; bottom: 15px; left: 15px; width: 20px; height: 20px; cursor: pointer;" 
+         onclick="window.parent.postMessage('toggle_roadmap', '*')">
+        <div style="width: 100%; height: 100%; background-color: #FFB90F; border: 1px solid #CC8400; border-radius: 2px;"></div>
     </div>
+
+    <h4 style="color: #779ECB; margin-top: 0; padding-left: 30px;">Traceability & Academic Source Verification:</h4>
+    <div style="padding-left: 30px;">
 </div>
-""")
+""", unsafe_allow_html=True)
