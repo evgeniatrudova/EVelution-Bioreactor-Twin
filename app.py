@@ -217,26 +217,26 @@ with st.sidebar:
         yield_val=true_val, purity=dynamic_purity, consistency=dynamic_consistency, q_score=quality_score
     )
     st.download_button(
-        label="📄 Download QMS Report (PDF)",
+        label="Download PDF",
         data=pdf_bytes,
         file_name="EVelution_Batch_Projection.pdf",
         mime="application/pdf"
     )
     
     st.markdown("<br>", unsafe_allow_html=True)
-    
+
     st.markdown("**Historical Benchmarking**")
     st.info("Drop a CSV of your best historical run here. The engine will project it as a dashed 'ghost line' on your main graph so you can optimize against it in real-time.")
     
-    # Notice the added 'key' parameter. This is required to programmatically clear the widget.
+    # 1. The File Uploader (Requires the 'key' to allow programmatic deletion)
     uploaded_file = st.file_uploader(
         "Upload History File (.csv)", 
         type="csv",
         help="Ensure your CSV contains 'Hour' and 'Therapeutic EVs' columns for the graph overlay to function.",
-        key="csv_uploader" 
+        key="csv_uploader"
     )
     
-    # Process upload
+    # 2. Process the upload
     if uploaded_file is not None:
         try:
             historical_df = pd.read_csv(uploaded_file)
@@ -244,18 +244,27 @@ with st.sidebar:
         except Exception as e:
             st.error(f"Could not read the file. Error: {e}")
 
-    # Security Feature: The Data Kill Switch
+    # 3. The "Kill Switch" (Only appears when data is active)
     if st.session_state.get('historical_df') is not None:
         st.success(f"☑️ Benchmark active! Loaded {len(st.session_state['historical_df'])} data points.")
         
-        if st.button("🗑️ Purge Benchmark Data"):
-            # 1. Delete the data dataframe from memory
+        # A prominent, full-width red warning button
+        if st.button("🗑️ Purge Benchmark Data", type="primary", use_container_width=True):
+            # Wipe the data from memory
             st.session_state['historical_df'] = None
-            # 2. Delete the uploader UI element state
+            # Wipe the file from the uploader widget
             del st.session_state['csv_uploader']
-            # 3. Reboot the app immediately to wipe the screen
+            # Instantly reboot the app to clear the screen
             st.rerun()
-
+            
+    # 4. Enterprise Legal & Data Privacy Disclaimer
+    st.markdown("""
+    <div style="font-size: 0.75em; color: #808080; margin-top: 20px; padding-top: 15px; border-top: 1px solid #333; line-height: 1.3;">
+        <b>⚖️ DATA PRIVACY & COMPLIANCE NOTICE:</b><br>
+        All CSV files uploaded to the EVelution-bio engine are processed strictly in <b>volatile session memory (RAM)</b> for real-time visualization purposes only. The application architecture contains no database, and does not harvest, cache, or transmit proprietary bioprocess data to external servers. Users are strictly responsible for utilizing the "Purge Benchmark Data" protocol before terminating their session to comply with internal corporate QMS, IP protection, and data governance policies.
+    </div>
+    """, unsafe_allow_html=True)
+    
 # --- 9. METRICS & BATCH EVALUATION ---
 m1, m2, m3, m4 = st.columns(4)
 m1.metric("Yield Performance", f"{true_val:.2e}")
