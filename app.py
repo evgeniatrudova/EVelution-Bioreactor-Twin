@@ -8,11 +8,6 @@
 # COPYRIGHT NOTICE & TERMS OF USE
 # Copyright (c) 2026 Evgenia Trudova. All Rights Reserved.
 # UNAUTHORIZED COMMERCIAL USE STRICTLY PROHIBITED.
-#
-# ==============================================================================
-# ==============================================================================
-# ==============================================================================
-# FED-BATCH BIOREACTOR OPTIMISATION FOR EV YIELD PRODUCTION
 # ==============================================================================
 
 import streamlit as st
@@ -20,239 +15,125 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 
-# --- CORE BIOLOGICAL MODEL ---
-class CellLineKinetics:
-    def __init__(self, name, base_ev_rate, optimal_env, kinetic_params, robustness):
-        self.name = name
-        self.base_ev_rate = base_ev_rate
-        self.optimal = optimal_env       
-        self.kinetics = kinetic_params   
-        self.robustness = robustness     
+# --- CORE BIOPHYSICAL ENGINE ---
+class BiogenesisEngine:
+    """Implements the MMModel differential equations."""
+    
+    @staticmethod
+    def calc_hypoxia_lambda(o2):
+        K, n, x0 = 10.0, 2.0, 21.0
+        return (K**n + x0**n) / (K**n + o2**n)
 
+    @staticmethod
+    def calc_thermal_flux(temp):
+        T0 = 310.15 # 37C in Kelvin
+        Tk = temp + 273.15
+        Ea, R_gas = 50000, 8.314
+        arrhenius = np.exp(-(Ea/R_gas) * (1/Tk - 1/T0))
+        # Stress function (A_stress)
+        T_diff = temp - 37.0
+        A_stress = (max(0, T_diff)**2) / (1.0**2 + max(0, T_diff)**2)
+        return arrhenius * (1 + A_stress)
+
+    @staticmethod
+    def calc_ph_flux(ph):
+        pH0 = 7.4
+        R_gas, T0 = 8.314, 310.15
+        dG = 2.303 * R_gas * T0 * (ph - pH0)
+        gibbs = np.exp(-dG / (R_gas * T0))
+        # Electrochemical modulator
+        pH_mod = 1 + (0.5 * (10**(-ph) / 10**(-pH0))**2) / (0.1**2 + (10**(-ph) / 10**(-pH0))**2)
+        return gibbs * pH_mod
+
+    @staticmethod
+    def get_ev_rate(o2, temp, ph, base_rate, s_o2, s_temp, s_ph):
+        # Thesis-derived integrative rate formula
+        l_hyp = BiogenesisEngine.calc_hypoxia_lambda(o2)
+        t_flux = BiogenesisEngine.calc_thermal_flux(temp)
+        p_flux = BiogenesisEngine.calc_ph_flux(ph)
+        
+        # Weighted sensitivity integration
+        rate = base_rate * (l_hyp**s_o2) * (t_flux**s_temp) * (p_flux**s_ph)
+        return max(0, rate)
+
+# --- BIOREACTOR SIMULATION ---
 class FedBatchBioreactorModel:
-    def __init__(self, cell_line):
-        self.cell = cell_line
+    def __init__(self):
+        self.base_rate = 1.2e9
 
-    def _calc_gradient_baseline(self, o2, temp, ph):
-        dev_o2 = abs(self.cell.optimal['o2'] - o2)
-        dev_temp = abs(self.cell.optimal['temp'] - temp)
-        dev_ph = abs(self.cell.optimal['ph'] - ph)
-        penalty = (dev_o2 * self.cell.kinetics['o2_grad_penalty']) + \
-                  (dev_temp * self.cell.kinetics['temp_grad_penalty']) + \
-                  (dev_ph * self.cell.kinetics['ph_grad_penalty'])
-        adjusted_base = self.cell.base_ev_rate * max(0.1, (1.0 - penalty))
-        return max(0, np.random.normal(loc=adjusted_base, scale=(adjusted_base * 0.05)))
-
-    def _calc_acute_stress(self, o2, temp, ph):
-        burst = 0.0
-        if o2 < (self.cell.optimal['o2'] - self.cell.kinetics['hypoxia_thresh']):
-            burst += ((self.cell.optimal['o2'] - self.cell.kinetics['hypoxia_thresh']) - o2)**2 * self.cell.kinetics['hypoxia_mult']
-        temp_diff = abs(self.cell.optimal['temp'] - temp)
-        if temp_diff > self.cell.kinetics['thermal_thresh']:
-            burst += (temp_diff**1.5) * self.cell.kinetics['thermal_mult']
-        if ph < (self.cell.optimal['ph'] - self.cell.kinetics['ph_thresh']):
-            burst += ((self.cell.optimal['ph'] - ph)**3) * self.cell.kinetics['ph_mult']
-        return burst
-
-    def _calc_hourly_damage(self, o2, temp, ph):
-        dmg = 0.0
-        if o2 < 2.0: dmg += ((2.0 - o2) * self.cell.kinetics['o2_death_rate']) / self.cell.robustness
-        if temp > 41.0: dmg += ((temp - 41.0) * self.cell.kinetics['temp_death_rate']) / self.cell.robustness
-        if ph < 6.4: dmg += ((6.4 - ph) * self.cell.kinetics['ph_death_rate']) / self.cell.robustness
-        return dmg
-
-    def run_simulation(self, init_o2, target_temp, target_ph, mixing_homogeneity, duration_hours):
-        main_weight = mixing_homogeneity / 100.0
-        dead_weight = 1.0 - main_weight
-        current_o2 = init_o2
-        viability = {"main": 100.0, "dead": 100.0}
-        
-        yields = {"therapeutic": 0.0, "stress": 0.0, "apoptotic": 0.0}
-        history = {"Hour": [], "Therapeutic EVs": [], "Stress-Altered EVs": [], "Apoptotic Impurities": [], "Cell Viability (%)": []}
-        
-        shear_damage = 0.0
-        if mixing_homogeneity > 85.0:
-            shear_damage = ((mixing_homogeneity - 85.0) ** 1.5) * 0.1
+    def run_simulation(self, init_o2, target_temp, target_ph, mixing_homogeneity, duration_hours, s_o2, s_temp, s_ph):
+        history = {"Hour": [], "Therapeutic EVs": [], "Apoptotic Impurities": [], "Cell Viability (%)": []}
+        viability = 100.0
         
         for hour in range(1, duration_hours + 1):
-            current_o2 = max(0.5, current_o2 - 0.1) 
-            dead_o2 = max(0.0, current_o2 * 0.1) 
-            dead_ph = max(6.0, target_ph - (hour * 0.02)) 
+            # Calculate flux using Thesis formulas
+            rate = BiogenesisEngine.get_ev_rate(init_o2, target_temp, target_ph, self.base_rate, s_o2, s_temp, s_ph)
             
-            if viability["main"] > 0:
-                yields["therapeutic"] += self._calc_gradient_baseline(current_o2, target_temp, target_ph) * main_weight * (viability["main"]/100)
-                yields["stress"] += self._calc_acute_stress(current_o2, target_temp, target_ph) * main_weight * (viability["main"]/100)
-                
-                dmg = self._calc_hourly_damage(current_o2, target_temp, target_ph) + (shear_damage / self.cell.robustness)
-                viability["main"] = max(0.0, viability["main"] - dmg)
-                yields["apoptotic"] += (dmg * self.cell.base_ev_rate * self.cell.kinetics['apoptotic_mult']) * main_weight
-                
-            if viability["dead"] > 0:
-                yields["therapeutic"] += self._calc_gradient_baseline(dead_o2, target_temp, dead_ph) * dead_weight * (viability["dead"]/100)
-                yields["stress"] += self._calc_acute_stress(dead_o2, target_temp, dead_ph) * dead_weight * (viability["dead"]/100)
-                
-                dmg = self._calc_hourly_damage(dead_o2, target_temp, dead_ph)
-                viability["dead"] = max(0.0, viability["dead"] - dmg)
-                yields["apoptotic"] += (dmg * self.cell.base_ev_rate * self.cell.kinetics['apoptotic_mult']) * dead_weight
-
+            # Damage logic (simplified for demonstration)
+            shear = ((mixing_homogeneity - 85.0)**1.5 * 0.1) if mixing_homogeneity > 85 else 0
+            viability = max(0, viability - (0.5 + shear))
+            
             history["Hour"].append(hour)
-            history["Therapeutic EVs"].append(yields["therapeutic"])
-            history["Stress-Altered EVs"].append(yields["stress"])
-            history["Apoptotic Impurities"].append(yields["apoptotic"])
-            history["Cell Viability (%)"].append((viability["main"] * main_weight) + (viability["dead"] * dead_weight))
+            history["Therapeutic EVs"].append(rate * (viability/100))
+            history["Apoptotic Impurities"].append(self.base_rate * (1 - viability/100) * 10)
+            history["Cell Viability (%)"].append(viability)
+            
+        return pd.DataFrame(history)
 
-        return history
-
-# --- STREAMLIT FRONTEND UI ---
-st.set_page_config(page_title="EV Bioreactor Digital Twin", layout="wide")
-
-# Minimal Header
+# --- STREAMLIT FRONTEND ---
+st.set_page_config(page_title="EVelution Engine", layout="wide")
 st.title("Bioreactor Optimisation")
-st.caption("Based on the Multi-Machinery Model of Biogenesis | Author: Evgenia Trudova")
+st.caption("Multi-Machinery Model (MMModel) Biophysical Twin | Author: Evgenia Trudova")
 
-# The MMModel Dropdown
-with st.expander("The Multi-Machinery Model (MMModel) Overview"):
-    st.markdown("""
-    **Biological Context:** The MMModel simulates the competing pathways of vesicle biogenesis. Rather than treating cells as simple particle factories, it calculates how cells respond to stress by either releasing therapeutic exosomes, shedding stress-altered vesicles to survive, or rupturing into apoptotic debris.
-    """)
-    st.markdown("#### 1. Acute Stress Bursts (Vesicle release triggered by environmental panic)")
-    st.markdown(r"$$ \text{Hypoxia Burst} = ((\text{Opt}_{O2} - \text{Hypoxia}_{\text{Thresh}}) - \text{Current}_{O2})^2 \times \text{Hypoxia}_{\text{Mult}} $$")
-    st.markdown(r"$$ \text{Thermal Burst} = (|\text{Opt}_{\text{Temp}} - \text{Current}_{\text{Temp}}|^{1.5}) \times \text{Thermal}_{\text{Mult}} $$")
-    st.markdown(r"$$ \text{pH Burst} = ((\text{Opt}_{pH} - \text{Current}_{pH})^3) \times \text{pH}_{\text{Mult}} $$")
-    
-    st.markdown("#### 2. Hourly Cellular Damage (Cell death from toxic environments)")
-    st.markdown(r"$$ \text{Anoxia Damage} = \frac{(2.0 - \text{Current}_{O2}) \times \text{O2}_{\text{DeathRate}}}{\text{Robustness}} $$")
-    st.markdown(r"$$ \text{Heat Damage} = \frac{(\text{Current}_{\text{Temp}} - 41.0) \times \text{Temp}_{\text{DeathRate}}}{\text{Robustness}} $$")
-    st.markdown(r"$$ \text{Acid Damage} = \frac{(6.4 - \text{Current}_{pH}) \times \text{pH}_{\text{DeathRate}}}{\text{Robustness}} $$")
-
-    st.markdown("#### 3. Functional Value Index (The Yield-to-Value Bridge)")
-    st.markdown(r"$$ \text{Total Yield} = \text{Therapeutic EVs} + \text{Stress EVs} + \text{Apoptotic Debris} $$")
-    st.markdown(r"$$ \text{Consistency} = \frac{\text{Therapeutic EVs}}{(\text{Therapeutic EVs} + \text{Stress EVs})} $$")
-    st.markdown(r"$$ \text{Purity} = \frac{(\text{Therapeutic EVs} + \text{Stress EVs})}{\text{Total Yield}} $$")
-    st.markdown(r"$$ \text{TRUE VALUE} = \text{Total Yield} \times \text{Consistency} \times \text{Purity} $$")
+with st.expander("Model Foundation & Biophysical Formulas"):
+    st.markdown("This engine utilizes phenotypic sensitivity coefficients to model EV biogenesis across any cell line.")
+    col_math1, col_math2 = st.columns(2)
+    with col_math1:
+        st.markdown("**Hypoxia (Hill Sigmoid)**")
+        st.latex(r"\lambda_{hyp} = \frac{K^n + x_0^n}{K^n + x^n}")
+        st.markdown("**Thermal (Arrhenius)**")
+        st.latex(r"R = r^* \cdot \exp\left[-\frac{E_a}{R}\left(\frac{1}{T_k} - \frac{1}{T_0}\right)\right]")
+    with col_math2:
+        st.markdown("**pH (Electrochemical)**")
+        st.latex(r"R_v = r^* \cdot [1 + \frac{A_0 (H_e/H_0)^n}{K_{pH}^n + (H_e/H_0)^n}]")
+        st.markdown("**Functional Value Index**")
+        st.latex(r"V_{final} = \text{Yield} \times \text{Purity} \times \text{Consistency}")
 
 st.divider()
 
-# Kinetics Initialization
-msc_kinetics = {
-    'o2_grad_penalty': 0.02, 'temp_grad_penalty': 0.05, 'ph_grad_penalty': 0.1,
-    'hypoxia_thresh': 10.0, 'hypoxia_mult': 5e8, 'thermal_thresh': 1.0, 'thermal_mult': 8e8,
-    'ph_thresh': 0.2, 'ph_mult': 2e9, 'o2_death_rate': 2.0, 'temp_death_rate': 2.5, 'ph_death_rate': 4.0,
-    'apoptotic_mult': 1.5e9
-}
-msc_cell = CellLineKinetics("Standard EV Cell Line", 1.2e9, {'o2': 21.0, 'temp': 37.0, 'ph': 7.4}, msc_kinetics, 1.0)
-bioreactor = FedBatchBioreactorModel(msc_cell)
+# --- SIDEBAR ---
+with st.sidebar:
+    st.header("Calibration")
+    s_o2 = st.slider("Hypoxia Sensitivity", 0.0, 2.0, 1.0)
+    s_temp = st.slider("Thermal Sensitivity", 0.0, 2.0, 1.0)
+    s_ph = st.slider("pH Sensitivity", 0.0, 2.0, 1.0)
+    st.divider()
+    st.header("Lab Parameters")
+    vol = st.number_input("Volume (L)", value=50.0)
+    o2 = st.slider("Oxygen (%)", 0.0, 21.0, 15.0)
+    temp = st.slider("Temp (°C)", 30.0, 45.0, 38.0)
+    ph = st.slider("pH", 6.0, 8.0, 7.0)
+    mix = st.slider("Mixing (%)", 50.0, 100.0, 85.0)
+    dur = st.slider("Duration (h)", 12, 72, 48)
 
-# Sidebar: Enterprise Features & UX Optimized Inputs
-st.sidebar.header("Data Management")
-uploaded_file = st.sidebar.file_uploader("Upload Run Data (CSV)", type=["csv"])
-if uploaded_file is not None:
-    st.sidebar.success("Historical data loaded.")
-if st.sidebar.button("Export to PDF Report"):
-    st.sidebar.info("Generating PDF... Please wait.")
+# --- RUN MODEL ---
+model = FedBatchBioreactorModel()
+df = model.run_simulation(o2, temp, ph, mix, dur, s_o2, s_temp, s_ph)
 
-st.sidebar.divider()
-
-st.sidebar.header("Clinical Goal")
-target_clinical_yield = st.sidebar.number_input("Desired Target Yield (EVs)", min_value=1e10, value=1e15, step=1e13, format="%.1e")
-
-st.sidebar.header("Wet Lab Input")
-reactor_vol = st.sidebar.number_input("Reactor Volume (L)", min_value=0.1, max_value=2000.0, value=50.0, step=0.5)
-init_o2 = st.sidebar.slider("Oxygen (%)", 0.0, 21.0, 15.0, 0.5)
-target_temp = st.sidebar.slider("Temperature (°C)", 30.0, 45.0, 38.0, 0.5)
-target_ph = st.sidebar.slider("pH", 6.0, 8.0, 7.0, 0.1)
-mixing_homo = st.sidebar.slider("Mixing Homogeneity (%)", 50.0, 100.0, 85.0, 1.0, help="Careful: >85% introduces hydrodynamic shear stress!")
-duration = st.sidebar.slider("Batch Duration (Hours)", 12, 72, 48, 2)
-
-# Run Simulation
-history = bioreactor.run_simulation(init_o2, target_temp, target_ph, mixing_homo, duration)
-df = pd.DataFrame(history)
-
-# Final Math & Conversions
-reactor_vol_ml = reactor_vol * 1000
-final_thera_ml = df["Therapeutic EVs"].iloc[-1]
-final_stress_ml = df["Stress-Altered EVs"].iloc[-1]
-final_apop_ml = df["Apoptotic Impurities"].iloc[-1]
-
-total_evs_ml = final_thera_ml + final_stress_ml
-total_particles_ml = total_evs_ml + final_apop_ml 
-
-target_yield_predicted = total_particles_ml * reactor_vol_ml
-functional_yield_total = total_evs_ml * reactor_vol_ml
-
-cargo_consistency = (final_thera_ml / total_evs_ml * 100) if total_evs_ml > 0 else 0
-downstream_purity = (total_evs_ml / total_particles_ml * 100) if total_particles_ml > 0 else 0
-
-true_functional_value_total = target_yield_predicted * (cargo_consistency / 100) * (downstream_purity / 100)
-
-goal_delta = true_functional_value_total - target_clinical_yield
-goal_achieved_pct = (true_functional_value_total / target_clinical_yield) * 100
-
-# --- DASHBOARD RENDER ---
-col1, col2, col3, col4 = st.columns(4)
-col1.metric("Predicted Functional Value", f"{true_functional_value_total:.2e}", f"{goal_delta:.1e} vs Goal", delta_color="normal")
-col2.metric("Harvest Concentration", f"{total_particles_ml:.2e} ev/mL", f"In {reactor_vol}L Tank")
-col3.metric("Downstream Purity", f"{downstream_purity:.1f}%")
-col4.metric("Cargo Consistency", f"{cargo_consistency:.1f}%")
-
-st.divider()
-
-st.markdown("### The Yield-to-Value Bridge")
-funnel_data = dict(
-    stage=["Raw Target Yield", "Intact EVs (Purity)", "True Functional Value"],
-    count=[target_yield_predicted, functional_yield_total, true_functional_value_total]
-)
-fig_funnel = px.funnel(funnel_data, x='count', y='stage', color_discrete_sequence=['#4C78A8'])
-fig_funnel.update_traces(textinfo="value+percent initial")
-fig_funnel.update_layout(margin=dict(l=20, r=20, t=20, b=20), height=300)
-st.plotly_chart(fig_funnel, use_container_width=True)
-
-with st.expander("Explore the Downstream Value Model"):
-    tab1, tab2 = st.tabs(["Biology", "Model"])
-    with tab1:
-        st.markdown("Traditional biomanufacturing focuses on raw nanoparticle counts. However, downstream filtration and chromatography will strip out broken lipid husks and apoptotic bodies. This metric visualizes the harsh reality of processing: isolating only the structurally intact, therapeutically viable EVs from the crude harvest.")
-    with tab2:
-        st.markdown(r"$$ V_{functional} = (C_{harvest} \times V_{reactor}) \times \left(\frac{Purity}{100}\right) \times \left(\frac{Consistency}{100}\right) $$")
+# --- DASHBOARD ---
+col1, col2, col3 = st.columns(3)
+col1.metric("Predicted Yield", f"{df['Therapeutic EVs'].sum()*vol:.2e}")
+col2.metric("Harvest Conc", f"{df['Therapeutic EVs'].iloc[-1]:.2e} ev/mL")
+col3.metric("Viability", f"{df['Cell Viability (%)'].iloc[-1]:.1f}%")
 
 st.divider()
 
 col_left, col_right = st.columns(2)
-
 with col_left:
     st.markdown("### Accumulation of Particles")
-    
-    df_melted = df.melt(id_vars=['Hour'], value_vars=['Therapeutic EVs', 'Stress-Altered EVs', 'Apoptotic Impurities'], 
-                        var_name='Particle Type', value_name='Count (per mL)')
-    
-    fig_acc = px.line(df_melted, x='Hour', y='Count (per mL)', color='Particle Type',
-                      color_discrete_map={"Therapeutic EVs": "#4C78A8", "Stress-Altered EVs": "#F58518", "Apoptotic Impurities": "#E45756"})
-    
-    fig_acc.update_layout(legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1), margin=dict(l=0, r=0, t=0, b=0))
-    fig_acc.update_yaxes(type="log", tickformat=".1e")
-    
-    st.plotly_chart(fig_acc, use_container_width=True)
-    
-    with st.expander("Explore Biogenesis Kinetics"):
-        tab1, tab2 = st.tabs(["Biology", "Model"])
-        with tab1:
-            st.markdown("Cells naturally secrete baseline exosomes, but extreme shifts in their environment (like suddenly dropping oxygen or spiking temperatures) induce cellular panic. Before they die, stressed cells rapidly shed their membranes to eject toxins or send distress signals, leading to the massive explosion of stress-altered vesicles seen here.")
-        with tab2:
-            st.markdown(r"$$ \frac{d(EV)}{dt} = k_{base}(1 - P_{grad}) + \sum_{s=1}^{n} k_{s}(|E_{opt} - E_{current}|)^m $$")
-
+    fig = px.line(df, x="Hour", y=["Therapeutic EVs", "Apoptotic Impurities"], log_y=True)
+    st.plotly_chart(fig, use_container_width=True)
 with col_right:
-    st.markdown("### Cellular Viability Curve")
-    fig_viab = px.line(df, x='Hour', y='Cell Viability (%)', color_discrete_sequence=['#72B7B2'])
-    fig_viab.update_layout(margin=dict(l=0, r=0, t=0, b=0), yaxis_range=[0, 100])
-    st.plotly_chart(fig_viab, use_container_width=True)
-    
-    with st.expander("Explore Membrane Degradation"):
-        tab1, tab2 = st.tabs(["Biology", "Model"])
-        with tab1:
-            st.markdown("""
-            In a real bioreactor, cells don't die instantly—they suffer cumulative stress. This curve tracks how cell membrane integrity degrades over the batch duration. 
-            
-            * **Toxicity:** When oxygen drops too low, or stagnant dead zones cause acidic lactate to build up, the cells begin to suffocate and undergo necrosis. 
-            * **Physical Tearing:** Conversely, if the impeller spins too aggressively (setting mixing homogeneity too high), the violent fluid forces generate hydrodynamic shear stress, literally tearing the fragile cell membranes apart and causing an immediate viability crash.
-            """)
-        with tab2:
-            st.markdown(r"$$ Viability_{t} = Viability_{t-1} - \left( \frac{\mu_{o2} + \mu_{temp} + \mu_{pH} + \tau_{shear}}{\rho_{cell}} \right) $$")
+    st.markdown("### Cellular Viability")
+    fig2 = px.line(df, x="Hour", y="Cell Viability (%)")
+    st.plotly_chart(fig2, use_container_width=True)
