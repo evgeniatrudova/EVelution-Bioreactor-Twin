@@ -75,7 +75,6 @@ st.title("EVelution Bioreactor Optimisation")
 st.markdown("""
 <div style="font-size: 0.9em; color: #B39EB5; margin-bottom: 20px;">
     Powered by the <b>Multi-Machinery Model (MMModel)</b> | Author: Evgenia Trudova 
-    <br><a href="https://stud.epsilon.slu.se/22206/" target="_blank" style="color: #779ECB; text-decoration: none;">📄 Read the foundational SLU Thesis (2026)</a>
 </div>
 """, unsafe_allow_html=True)
 
@@ -99,23 +98,16 @@ with st.expander("Explore Logic", expanded=False):
 # --- 5. CELL LINE DATABASE (EMPIRICALLY SOURCED) ---
 cell_line_db = {
     "Human MSCs (Bone Marrow)": {
-        "hypoxia": 1.15, "thermal": 0.85, "ph": 0.95,
-        # DEVELOPER NOTE: Derived from HIF-1a upregulation kinetics at 2-7% O2.
-        "citation": "HIF-1a upregulation kinetics at 2-7% O2 (Liu et al., 2015)"
+        "hypoxia": 1.15, "thermal": 0.85, "ph": 0.95
     },
     "HEK293T (Suspension)": {
-        "hypoxia": 0.90, "thermal": 1.20, "ph": 0.80,
-        # DEVELOPER NOTE: Modeled on biphasic thermal shifts (37C down to 33C).
-        "citation": "Biphasic thermal shift (37C to 33C) modeling (Furdui et al., 2021)"
+        "hypoxia": 0.90, "thermal": 1.20, "ph": 0.80
     },
     "CHO-K1": {
-        "hypoxia": 0.75, "thermal": 0.95, "ph": 1.30,
-        # DEVELOPER NOTE: Accounts for severe specific growth rate inhibition due to lactate-induced pH drops.
-        "citation": "Lactate-induced intracellular pH drop inhibition (Pan et al., 2017)"
+        "hypoxia": 0.75, "thermal": 0.95, "ph": 1.30
     },
     "Custom / Empirical DoE": {
-        "hypoxia": 1.00, "thermal": 1.00, "ph": 1.00,
-        "citation": "User-defined parameters derived from internal Design of Experiments (DoE)"
+        "hypoxia": 1.00, "thermal": 1.00, "ph": 1.00
     }
 }
 
@@ -124,13 +116,6 @@ with st.sidebar:
     st.header("🧬 Cell Line Parameterization")
     selected_cell = st.selectbox("Select Host Cell Line", list(cell_line_db.keys()), help="Loads validated empirical kinetic parameters.")
     defaults = cell_line_db[selected_cell]
-    
-    # Traceability display
-    st.markdown(f"""
-    <div style="background-color:#1E1E2E; padding:10px; border-radius:5px; font-size:0.8em; color:#B39EB5; margin-bottom:15px;">
-        <b>📖 Traceability / Source:</b><br>{defaults['citation']}
-    </div>
-    """, unsafe_allow_html=True)
     
     manual_override = st.toggle("Enable Manual Input (DoE Override)")
     s_o2 = st.number_input("Hypoxia Modifier (Ks scalar)", min_value=0.0, max_value=3.0, value=defaults["hypoxia"], step=0.05, disabled=not manual_override)
@@ -283,4 +268,18 @@ with r2c2:
         t1.markdown("Determines the 'sweet spot' for harvest duration. The inflection point occurs where incremental EV gain is offset by culture necrosis and byproduct toxicity.")
         t2.latex(r"\frac{d}{dt}Yield(t) = 0 \quad at \quad t_{optimal}")
 
-# --- 10. REG
+# --- 10. REGULATORY & ACADEMIC FOOTER ---
+st.divider()
+st.markdown("""
+<div style="text-align: left; color: #A0A0B0; font-size: 0.85em; padding: 20px; background-color: #1E1E2E; border-radius: 8px;">
+    <h4 style="color: #779ECB; margin-top: 0;">Traceability & Academic Source Verification:</h4>
+    <b>[1] Core Engine (MMModel):</b> Trudova, E. (2026). <i>Extracellular vesicles: biogenesis, co-evolution and insights from parasitology.</i> Swedish University of Agricultural Sciences (SLU). <a href="https://stud.epsilon.slu.se/22206/" target="_blank" style="color: #779ECB;">URN: urn:nbn:se:slu:epsilon-s-22206</a><br>
+    <b>[2] Human MSCs:</b> Liu et al. (2015). <i>The Effect of Hypoxia on Mesenchymal Stem Cell Biology.</i> PLoS One. <a href="https://doi.org/10.1371/journal.pone.0126715" target="_blank" style="color: #779ECB;">DOI: 10.1371/journal.pone.0126715</a><br>
+    <b>[3] HEK293T:</b> Furdui et al. (2021). <i>Enhancement of Transgene Expression by Mild Hypothermia.</i> Biotechnol Prog. <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC8469586/" target="_blank" style="color: #779ECB;">PMC8469586</a><br>
+    <b>[4] CHO-K1:</b> Pan et al. (2017). <i>Metabolic characterization of a CHO cell size increase phase.</i> BMC Biotechnol. <a href="https://doi.org/10.1007/s00253-017-8531-y" target="_blank" style="color: #779ECB;">https://doi.org/10.1007/s00253-017-8531-y</a><br>
+    <br>
+    <div style="text-align: center; margin-top: 15px;">
+        <i>EVelution-bio Digital Twin Engine | Engineered for QMS-Compliant Bioprocess Optimization</i>
+    </div>
+</div>
+""", unsafe_allow_html=True)
