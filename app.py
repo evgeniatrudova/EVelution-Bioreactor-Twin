@@ -14,6 +14,7 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
+from io import BytesIO
 
 # --- 1. THEME & STYLING ---
 st.set_page_config(page_title="EVelution Bioreactor Twin", layout="wide")
@@ -52,7 +53,9 @@ class BiogenesisEngine:
         return max(0, base_rate * (lambda_hyp**s_o2) * (thermal_flux**s_temp) * ((gibbs * pH_mod)**s_ph))
 
 class FedBatchBioreactorModel:
-    def __init__(self): self.base_rate = 1.2e9
+    def __init__(self): 
+        self.base_rate = 1.2e9
+    
     def run_simulation(self, init_o2, target_temp, target_ph, mixing_homogeneity, duration_hours, s_o2, s_temp, s_ph):
         viability = 100.0
         history = {"Hour": [], "Therapeutic EVs": [], "Stress-Altered EVs": [], "Apoptotic Impurities": [], "Cell Viability (%)": []}
@@ -60,7 +63,8 @@ class FedBatchBioreactorModel:
             rate = BiogenesisEngine.calc_flux(init_o2, target_temp, target_ph, s_o2, s_temp, s_ph, self.base_rate)
             shear = ((mixing_homogeneity - 85.0)**1.5 * 0.1) if mixing_homogeneity > 85 else 0
             viability = max(0, viability - (0.5 + shear))
-            history["Hour"].append(hour); history["Therapeutic EVs"].append(rate * (viability / 100))
+            history["Hour"].append(hour)
+            history["Therapeutic EVs"].append(rate * (viability / 100))
             history["Stress-Altered EVs"].append(rate * ((100 - viability) / 100) * 0.3)
             history["Apoptotic Impurities"].append(self.base_rate * ((100 - viability) / 100) * 5)
             history["Cell Viability (%)"].append(viability)
@@ -71,8 +75,7 @@ st.title("EVelution Bioreactor Optimisation")
 st.caption("Multi-Machinery Model (MMModel) | Default Cell Line: MSC | Author: Evgenia Trudova")
 
 # Metric Definition Expander
- with st.expander("Explore Logic", expanded=False):
-    # Tabbed view keeps the UI clean and avoids 'wall of text'
+with st.expander("Explore Logic", expanded=False):
     tab_bio, tab_math = st.tabs(["Biology", "Model"])
 
     with tab_bio:
@@ -123,6 +126,7 @@ st.subheader("Analytics")
 r1c1, r1c2 = st.columns(2)
 r2c1, r2c2 = st.columns(2)
 
+# Grid Logic
 with r1c1:
     st.markdown("### Process Accumulation")
     fig = px.line(df, x="Hour", y=["Therapeutic EVs", "Stress-Altered EVs", "Apoptotic Impurities"], log_y=True,
@@ -137,8 +141,9 @@ with r1c1:
 with r1c2:
     st.markdown("### Cellular Viability")
     crit = df[df["Cell Viability (%)"] < 50.0]
-    fig = px.line(df, x="Hour", y="Cell Viability (%)", color_discrete_sequence=[C_BLUE])
-    if not crit.empty: fig.add_trace(go.Scatter(x=[crit.iloc[0]["Hour"]], y=[crit.iloc[0]["Cell Viability (%)"]], mode='markers', marker=dict(size=12, color=C_STAR, symbol='star')))
+    fig = px.line(df, x="Hour", y=["Cell Viability (%)"], color_discrete_sequence=[C_BLUE])
+    if not crit.empty: 
+        fig.add_trace(go.Scatter(x=[crit.iloc[0]["Hour"]], y=[crit.iloc[0]["Cell Viability (%)"]], mode='markers', marker=dict(size=12, color=C_STAR, symbol='star')))
     fig.update_layout(height=fixed_height, margin=fixed_margin, showlegend=False)
     st.plotly_chart(fig, use_container_width=True)
     with st.expander("Explore Logic"):
