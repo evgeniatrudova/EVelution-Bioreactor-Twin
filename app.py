@@ -9,7 +9,6 @@
 # Copyright (c) 2026 Evgenia Trudova. All Rights Reserved.
 # UNAUTHORIZED COMMERCIAL USE STRICTLY PROHIBITED.
 # ==============================================================================
-
 import streamlit as st
 import numpy as np
 import pandas as pd
@@ -17,10 +16,8 @@ import plotly.express as px
 
 # --- CORE BIOPHYSICAL ENGINE (Thesis Formulas) ---
 class BiogenesisEngine:
-    """
-    Implements the Multi-Machinery Model (MMModel) derived 
-    from the thesis biophysical formulas.
-    """
+    """Implements the MMModel differential equations."""
+    
     @staticmethod
     def calc_flux(o2, temp, ph, s_o2, s_temp, s_ph, base_rate):
         # Constants
@@ -34,7 +31,6 @@ class BiogenesisEngine:
         # 2. Thermal (Arrhenius-inspired)
         Ea = 50000
         arrhenius = np.exp(-(Ea/R_gas) * (1/Tk - 1/T0))
-        # Stress function A_stress
         T_diff = temp - 37.0
         A_stress = (max(0, T_diff)**2) / (1.0**2 + max(0, T_diff)**2)
         thermal_flux = arrhenius * (1 + A_stress)
@@ -43,7 +39,6 @@ class BiogenesisEngine:
         pH0 = 7.4
         dG = 2.303 * R_gas * T0 * (ph - pH0)
         gibbs = np.exp(-dG / (R_gas * T0))
-        # Electrochemical modulator
         pH_mod = 1 + (0.5 * (10**(-ph) / 10**(-pH0))**2) / (0.1**2 + (10**(-ph) / 10**(-pH0))**2)
         
         # Integration
@@ -60,10 +55,7 @@ class FedBatchBioreactorModel:
         history = {"Hour": [], "Therapeutic EVs": [], "Apoptotic Impurities": [], "Cell Viability (%)": []}
         
         for hour in range(1, duration_hours + 1):
-            # Calculate flux using Thesis-derived Engine
             rate = BiogenesisEngine.calc_flux(init_o2, target_temp, target_ph, s_o2, s_temp, s_ph, self.base_rate)
-            
-            # Damage calculation
             shear = ((mixing_homogeneity - 85.0)**1.5 * 0.1) if mixing_homogeneity > 85 else 0
             viability = max(0, viability - (0.5 + shear))
             
@@ -75,12 +67,12 @@ class FedBatchBioreactorModel:
         return pd.DataFrame(history)
 
 # --- STREAMLIT FRONTEND UI ---
-st.set_page_config(page_title="EVelution Digital Twin", layout="wide")
+st.set_page_config(page_title="EVelution Engine", layout="wide")
 
 st.title("Bioreactor Optimisation")
-st.caption("Multi-Machinery Model (MMModel) Biophysical Twin | Author: Evgenia Trudova")
+st.caption("Default Configuration: Mesenchymal Stromal Cells | MMModel ")
 
-# The MMModel Dropdown with Thesis Formulas
+# MMModel Explanation
 with st.expander("Model Foundation & Biophysical Formulas"):
     st.markdown("This engine utilizes phenotypic sensitivity coefficients to model EV biogenesis across any cell line.")
     col_math1, col_math2 = st.columns(2)
@@ -97,42 +89,39 @@ with st.expander("Model Foundation & Biophysical Formulas"):
 
 st.divider()
 
-# --- SIDEBAR: ENTERPRISE FEATURES ---
+# --- SIDEBAR: ORGANIZED HIERARCHY WITH MSC DEFAULTS ---
 with st.sidebar:
-    st.header("Calibration")
-    s_o2 = st.slider("Hypoxia Sensitivity", 0.0, 2.0, 1.0)
-    s_temp = st.slider("Thermal Sensitivity", 0.0, 2.0, 1.0)
-    s_ph = st.slider("pH Sensitivity", 0.0, 2.0, 1.0)
+    st.header("Cell Line")
+    s_o2 = st.slider("Hypoxia Sensitivity", 0.0, 2.0, 1.2, help="MSC baseline sensitivity to O2 tension")
+    s_temp = st.slider("Thermal Sensitivity", 0.0, 2.0, 0.8)
+    s_ph = st.slider("pH Sensitivity", 0.0, 2.0, 0.9)
+    
     st.divider()
-    st.header("Data Management")
-    st.file_uploader("Upload Run Data (CSV)", type=["csv"])
-    if st.button("Export to PDF Report"):
-        st.info("Generating report...")
-
-    st.header("Lab Parameters")
+    
+    st.header("Experimental")
     vol = st.number_input("Volume (L)", value=50.0)
-    o2 = st.slider("Oxygen (%)", 0.0, 21.0, 15.0)
-    temp = st.slider("Temp (°C)", 30.0, 45.0, 38.0)
-    ph = st.slider("pH", 6.0, 8.0, 7.0)
+    o2 = st.slider("Oxygen (%)", 0.0, 21.0, 21.0) # Standard Normoxia
+    temp = st.slider("Temp (°C)", 30.0, 45.0, 37.0) # MSC Optimal
+    ph = st.slider("pH", 6.0, 8.0, 7.4) # MSC Optimal
     mix = st.slider("Mixing (%)", 50.0, 100.0, 85.0)
     dur = st.slider("Duration (h)", 12, 72, 48)
+    
+    st.divider()
+    
+    st.header("File Managment")
+    target_clinical_yield = st.number_input("Desired Yield (EVs)", value=1e15, format="%.1e")
+    uploaded_file = st.file_uploader("Upload CSV", type=["csv"])
+    if st.button("Export PDF Report"):
+        st.info("Generating PDF report...")
 
-# --- SIMULATION & CALCULATIONS ---
+# --- SIMULATION & DASHBOARD ---
 model = FedBatchBioreactorModel()
 df = model.run_simulation(o2, temp, ph, mix, dur, s_o2, s_temp, s_ph)
 
-# Final Metrics
-final_thera = df["Therapeutic EVs"].iloc[-1] * vol * 1000
-purity = 0.78 # Simplified proxy
-consistency = 0.62 # Simplified proxy
-true_val = final_thera * purity * consistency
-
-# --- DASHBOARD RENDER ---
-col1, col2, col3, col4 = st.columns(4)
-col1.metric("Predicted Functional Value", f"{true_val:.2e}")
+col1, col2, col3 = st.columns(3)
+col1.metric("Predicted Yield", f"{df['Therapeutic EVs'].sum()*vol:.2e}")
 col2.metric("Harvest Concentration", f"{df['Therapeutic EVs'].iloc[-1]:.2e} ev/mL")
-col3.metric("Downstream Purity", f"{purity*100:.1f}%")
-col4.metric("Cargo Consistency", f"{consistency*100:.1f}%")
+col3.metric("Viability", f"{df['Cell Viability (%)'].iloc[-1]:.1f}%")
 
 st.divider()
 
@@ -141,18 +130,7 @@ with col_left:
     st.markdown("### Process Accumulation")
     fig = px.line(df, x="Hour", y=["Therapeutic EVs", "Apoptotic Impurities"], log_y=True)
     st.plotly_chart(fig, use_container_width=True)
-    
-    with st.expander("Explore Logic"):
-        tab1, tab2 = st.tabs(["Biology", "Model"])
-        tab1.markdown("Dynamics based on cell membrane stability and metabolic stress response.")
-        tab2.markdown(r"Calculated using non-linear sensitivity coefficients $\sigma_{o2}, \sigma_{temp}, \sigma_{ph}$.")
-
 with col_right:
     st.markdown("### Cellular Viability")
     fig2 = px.line(df, x="Hour", y="Cell Viability (%)")
     st.plotly_chart(fig2, use_container_width=True)
-    
-    with st.expander("Explore Membrane Degradation"):
-        tab1, tab2 = st.tabs(["Biology", "Model"])
-        tab1.markdown("Cumulative environmental load causes necrosis and hydrodynamic tearing.")
-        tab2.markdown(r"$$ Viability_{t} = Viability_{t-1} - \tau_{shear} $$")
