@@ -166,7 +166,9 @@ with st.sidebar:
     ph = st.slider("pH", 6.0, 8.0, 7.4)
     mix = st.slider("Mixing (%)", 50, 100, 85)
     dur = st.slider("Duration (h)", 12, 72, 48)
-    
+    st.divider()
+
+    st.header("Harvest")
     target = st.number_input("Target Yield", value=1e15, format="%.1e")
     
     st.divider()
