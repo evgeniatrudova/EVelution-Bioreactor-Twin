@@ -421,61 +421,55 @@ with r2c2:
 # --- THE FOOTER ---
 st.divider()
 
-# 1. Define the CSS for the "Found Cube" (Right-aligned, Eevee colors)
+# 1. CSS for the Cube (16px size, specific shading, Eevee-orange hover)
 st.markdown("""
 <style>
-/* Footer container to hold text and cube */
-.footer-wrapper {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background-color: #1E1E2E;
-    padding: 20px;
-    border-radius: 8px;
-}
-
-/* Style the popover button to be the pixel cube */
+/* Style the popover button as the pixel cube */
 [data-testid="stPopover"] > button {
-    background-color: #B07030 !important;      /* Slightly darker base */
-    border: 2px solid #6A4020 !important;      /* Darker edging */
-    width: 24px !important;
-    height: 24px !important;
+    width: 16px !important;
+    height: 16px !important;
     padding: 0 !important;
-    border-radius: 4px !important;
+    border-radius: 2px !important;
+    /* Shading: Base is neutral dark, 3px dark right/bottom, 1px dark top/left */
+    background-color: #2A2A3A !important;
+    border-top: 1px solid #10101A !important;
+    border-left: 1px solid #10101A !important;
+    border-right: 3px solid #000000 !important;
+    border-bottom: 3px solid #000000 !important;
     transition: all 0.3s ease;
 }
 
-/* Turns Eevee orange when hovered/found */
+/* Turns Eevee orange when found/hovered */
 [data-testid="stPopover"] > button:hover {
-    background-color: #D78A4D !important;      /* Eevee Orange */
+    background-color: #D78A4D !important;
     border-color: #A66A3B !important;
 }
 
-/* Hide default caret/text */
+/* Hide default arrow/text */
 [data-testid="stPopover"] > button > div { display: none; }
 </style>
 """, unsafe_allow_html=True)
 
-# 2. Render the layout
-# We use a container to force the Flexbox layout
+# 2. Footer Layout: Left (References) | Right (Cube)
 with st.container():
-    # Split footer into text and cube
-    col_text, col_cube = st.columns([0.95, 0.05])
+    col1, col2 = st.columns([0.96, 0.04])
     
-    with col_text:
+    with col1:
+        # Re-adding your specific reference links
         st.markdown("""
-        <div style="color: #A0A0B0; font-size: 0.85em; padding-left: 10px;">
-            <b>Traceability & Academic Source Verification:</b><br>
-            [1] Core Engine (MMModel): Trudova, E. (2026). <i>EV Biogenesis...</i> | 
-            [2] MSCs: Liu et al. (2015) | [3] HEK293T: Furdui et al. (2021) | [4] CHO-K1: Pan et al. (2017)
-            <br><i>EVelution-bio Digital Twin Engine | Engineered for QMS-Compliant Bioprocess Optimization</i>
+        <div style="text-align: left; color: #A0A0B0; font-size: 0.85em; padding: 10px; background-color: #1E1E2E; border-radius: 8px;">
+            <h4 style="color: #779ECB; margin-top: 0;">Traceability & Academic Source Verification:</h4>
+            <b>[1] Core Engine (MMModel):</b> Trudova, E. (2026). <i>EV Biogenesis...</i> <a href="https://stud.epsilon.slu.se/22206/" target="_blank" style="color: #779ECB;">URN: urn:nbn:se:slu:epsilon-s-22206</a> | 
+            <b>[2] MSCs:</b> Liu et al. (2015) <a href="https://doi.org/10.1371/journal.pone.0126715" target="_blank" style="color: #779ECB;">DOI</a> | 
+            <b>[3] HEK293T:</b> Furdui et al. (2021) <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC8469586/" target="_blank" style="color: #779ECB;">PMC8469586</a> | 
+            <b>[4] CHO-K1:</b> Pan et al. (2017) <a href="https://doi.org/10.1007/s00253-017-8531-y" target="_blank" style="color: #779ECB;">Link</a>
         </div>
         """, unsafe_allow_html=True)
     
-    with col_cube:
-        # The popover acts as the button. No 'if' logic needed.
+    with col2:
+        # The Cube (Popover is the trigger)
+        # Positioned right-bottom via layout
         with st.popover(" "):
-            # You can add content here later
-            st.write("")
-    
-    st.markdown('</div>', unsafe_allow_html=True)
+            st.subheader("🚀 Roadmap in Development")
+            st.progress(0.15)
+            st.write("Targeting: Cloud API, Sensor Integration, Sensitivity Intervals.")
