@@ -236,7 +236,7 @@ with st.sidebar:
         key="csv_uploader"
     )
     
-    # 2. Process the upload
+   # Process the upload
     if uploaded_file is not None:
         try:
             historical_df = pd.read_csv(uploaded_file)
@@ -244,24 +244,28 @@ with st.sidebar:
         except Exception as e:
             st.error(f"Could not read the file. Error: {e}")
 
-    # 3. The "Kill Switch" (Only appears when data is active)
+    # ==========================================
+    # THE KILL SWITCH (Directly above the legal text)
+    # ==========================================
     if st.session_state.get('historical_df') is not None:
         st.success(f"☑️ Benchmark active! Loaded {len(st.session_state['historical_df'])} data points.")
         
-        # A prominent, full-width red warning button
-        if st.button("🗑️ Purge Benchmark Data", type="primary", use_container_width=True):
+        # The prominent red purge button
+        if st.button("🗑️ Delete Uploaded CSV Data", type="primary", use_container_width=True):
             # Wipe the data from memory
             st.session_state['historical_df'] = None
             # Wipe the file from the uploader widget
             del st.session_state['csv_uploader']
             # Instantly reboot the app to clear the screen
             st.rerun()
-            
-    # 4. Enterprise Legal & Data Privacy Disclaimer
+
+    # ==========================================
+    # THE LEGAL DISCLAIMER
+    # ==========================================
     st.markdown("""
-    <div style="font-size: 0.75em; color: #808080; margin-top: 20px; padding-top: 15px; border-top: 1px solid #333; line-height: 1.3;">
-        <b>⚖️ DATA PRIVACY & COMPLIANCE NOTICE:</b><br>
-        All CSV files uploaded to the EVelution-bio engine are processed strictly in <b>volatile session memory (RAM)</b> for real-time visualization purposes only. The application architecture contains no database, and does not harvest, cache, or transmit proprietary bioprocess data to external servers. Users are strictly responsible for utilizing the "Purge Benchmark Data" protocol before terminating their session to comply with internal corporate QMS, IP protection, and data governance policies.
+    <div style="font-size: 0.75em; color: #808080; margin-top: 20px; padding-top: 15px; border-top: 1px solid #333; line-height: 1.4; text-align: justify;">
+        <b>DATA GOVERNANCE AND LIABILITY DISCLAIMER</b><br>
+        Data uploaded to EVelution-bio is processed exclusively in volatile memory (RAM) for ephemeral visualization. The architecture possesses no persistent storage capabilities and conducts no external transmission. End-users retain strict, sole liability for the protection of proprietary intellectual property and trade secrets, in accordance with the EU Trade Secrets Directive (2016/943) and the US Defend Trade Secrets Act (DTSA). Users are required to execute the data purge protocol upon session completion. This localized, non-retention operational model places the application outside the scope of permanent data hosting liabilities. Utilization of this software constitutes formal acknowledgment of end-user responsibility under applicable Quality Management Systems (QMS) and electronic record frameworks (e.g., FDA 21 CFR Part 11).
     </div>
     """, unsafe_allow_html=True)
     
