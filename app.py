@@ -211,6 +211,7 @@ with col_left:
     
     fig_acc.update_layout(legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1), margin=dict(l=0, r=0, t=0, b=0))
     # Enforce scientific notation on Y axis for readability
+    fig_acc.update_yaxes(type="log", tickformat=".1e")
     fig_acc.update_yaxes(tickformat=".1e")
     
     st.plotly_chart(fig_acc, use_container_width=True)
