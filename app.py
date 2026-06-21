@@ -206,7 +206,7 @@ yield_achievement = (true_val / target) * 100
 quality_score = (dynamic_purity * dynamic_consistency) * 100 
 
 
-# --- 8. SIDEBAR DATA EXPORT ---
+# --- 8. SIDEBAR DATA  ---
 with st.sidebar:
     st.divider()
     st.header("Data & Benchmarking")
@@ -228,20 +228,33 @@ with st.sidebar:
     st.markdown("**Historical Benchmarking**")
     st.info("Drop a CSV of your best historical run here. The engine will project it as a dashed 'ghost line' on your main graph so you can optimize against it in real-time.")
     
+    # Notice the added 'key' parameter. This is required to programmatically clear the widget.
     uploaded_file = st.file_uploader(
         "Upload History File (.csv)", 
         type="csv",
-        help="Ensure your CSV contains 'Hour' and 'Therapeutic EVs' columns for the graph overlay to function."
+        help="Ensure your CSV contains 'Hour' and 'Therapeutic EVs' columns for the graph overlay to function.",
+        key="csv_uploader" 
     )
     
+    # Process upload
     if uploaded_file is not None:
         try:
             historical_df = pd.read_csv(uploaded_file)
-            st.success(f"☑️ Benchmark active! Loaded {len(historical_df)} data points.")
             st.session_state['historical_df'] = historical_df
         except Exception as e:
             st.error(f"Could not read the file. Error: {e}")
 
+    # Security Feature: The Data Kill Switch
+    if st.session_state.get('historical_df') is not None:
+        st.success(f"☑️ Benchmark active! Loaded {len(st.session_state['historical_df'])} data points.")
+        
+        if st.button("🗑️ Purge Benchmark Data"):
+            # 1. Delete the data dataframe from memory
+            st.session_state['historical_df'] = None
+            # 2. Delete the uploader UI element state
+            del st.session_state['csv_uploader']
+            # 3. Reboot the app immediately to wipe the screen
+            st.rerun()
 
 # --- 9. METRICS & BATCH EVALUATION ---
 m1, m2, m3, m4 = st.columns(4)
