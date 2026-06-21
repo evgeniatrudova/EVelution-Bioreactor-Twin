@@ -173,8 +173,7 @@ with row2_col1:
         
         tab_bio.markdown("""
         Visualizes the loss cascade from crude bioreactor harvest to the final functional therapeutic product. 
-        
-        **How to read this graph:** Focus on the horizontal width of each segment, which quantitatively represents the total EV yield at that specific process stage. The narrowing vertical intervals between segments explicitly illustrate the cumulative loss (or 'drop-off') attributable to downstream purification and cargo loading efficiencies.
+        Horizontal width of each segment quantitatively represents the total EV yield at that specific process stage. The narrowing vertical intervals between segments explicitly illustrate the cumulative loss (or 'drop-off') attributable to downstream purification and cargo loading efficiencies.
         """)
         
         tab_mod.latex(r"V_{final} = Yield_{raw} \cdot \eta_{purity} \cdot \phi_{consistency}")
