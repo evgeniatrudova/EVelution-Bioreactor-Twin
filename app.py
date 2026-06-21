@@ -74,7 +74,7 @@ class FedBatchBioreactorModel:
 st.title("EVelution Bioreactor Optimisation")
 st.markdown("""
 <div style="font-size: 0.9em; color: #B39EB5; margin-bottom: 20px;">
-    Powered by the <b>Multi-Machinery Model (MMModel)</b> | Author: Evgenia Trudova 
+    <b>Multi-Machinery Model (MMModel)</b> | Author: Evgenia Trudova 
 </div>
 """, unsafe_allow_html=True)
 
