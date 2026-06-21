@@ -16,7 +16,6 @@ import plotly.express as px
 
 # --- CORE BIOPHYSICAL ENGINE (Thesis Formulas) ---
 class BiogenesisEngine:
-    """Implements the Multi-Machinery Model (MMModel) derived from the thesis."""
     @staticmethod
     def calc_flux(o2, temp, ph, s_o2, s_temp, s_ph, base_rate):
         T0, R_gas = 310.15, 8.314
@@ -97,14 +96,14 @@ st.divider()
 
 # --- SIDEBAR: REORGANIZED HIERARCHY ---
 with st.sidebar:
-    st.header("1. Calibration")
-    s_o2 = st.slider("Hypoxia Sensitivity", 0.0, 2.0, 1.2)
-    s_temp = st.slider("Thermal Sensitivity", 0.0, 2.0, 0.8)
-    s_ph = st.slider("pH Sensitivity", 0.0, 2.0, 0.9)
+    st.header("Cell Line Sensetivity")
+    s_o2 = st.slider("Hypoxia", 0.0, 2.0, 1.2)
+    s_temp = st.slider("Temperature", 0.0, 2.0, 0.8)
+    s_ph = st.slider("pH", 0.0, 2.0, 0.9)
     
     st.divider()
     
-    st.header("2. Experimental Parameters")
+    st.header("Experimental")
     vol = st.number_input("Volume (L)", value=50.0)
     o2 = st.slider("Oxygen (%)", 0.0, 21.0, 21.0)
     temp = st.slider("Temp (°C)", 30.0, 45.0, 37.0)
@@ -114,12 +113,12 @@ with st.sidebar:
     
     st.divider()
     
-    st.header("3. Desired Yield")
+    st.header("Desired Yield")
     target_clinical_yield = st.number_input("Desired Target Yield (EVs)", value=1e15, step=1e14, format="%.1e")
     
     st.divider()
     
-    st.header("4. Data Management")
+    st.header("Data Management")
     st.file_uploader("Upload Run Data (CSV)", type=["csv"])
     if st.button("Export to PDF Report"):
         st.info("Generating report...")
