@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
-from fpdf import FPDF  # <-- ADDED IMPORT
+from fpdf import FPDF  
 
 # --- 1. THEME & STYLING ---
 st.set_page_config(page_title="EVelution Bioreactor Twin", layout="wide")
@@ -70,7 +70,7 @@ class FedBatchBioreactorModel:
             history["Cell Viability (%)"].append(viability)
         return pd.DataFrame(history)
 
-# <-- ADDED PDF FUNCTION -->
+# <-- FIXED PDF FUNCTION -->
 def generate_qms_pdf(cell_line, vol, dur, target, yield_val, purity, consistency, q_score):
     """Generates a formal, regulatory-style PDF report."""
     pdf = FPDF()
@@ -119,7 +119,8 @@ def generate_qms_pdf(cell_line, vol, dur, target, yield_val, purity, consistency
     pdf.set_font("Helvetica", "B", 11)
     pdf.cell(0, 10, f"STATUS: {status}", ln=True)
     
-    return pdf.output(dest='S').encode('latin-1')
+    # THE FIX: Return directly as bytes from fpdf2
+    return bytes(pdf.output())
 
 
 # --- 4. APP UI HEADER ---
@@ -205,7 +206,7 @@ yield_achievement = (true_val / target) * 100
 quality_score = (dynamic_purity * dynamic_consistency) * 100 
 
 
-# --- 8. SIDEBAR DATA EXPORT (Now it has the math it needs!) ---
+# --- 8. SIDEBAR DATA EXPORT ---
 with st.sidebar:
     st.divider()
     st.header("Data & Benchmarking")
