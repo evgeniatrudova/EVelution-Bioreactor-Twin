@@ -96,7 +96,7 @@ st.divider()
 
 # --- SIDEBAR: REORGANIZED HIERARCHY ---
 with st.sidebar:
-    st.header("Cell Line Sensetivity")
+    st.header("Cell Line Sensitivity")
     s_o2 = st.slider("Hypoxia", 0.0, 2.0, 1.2)
     s_temp = st.slider("Temperature", 0.0, 2.0, 0.8)
     s_ph = st.slider("pH", 0.0, 2.0, 0.9)
