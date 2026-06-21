@@ -466,12 +466,31 @@ with st.container():
     col1, col2 = st.columns([0.95, 0.05])
     
     with col1:
-        st.markdown("""
-        <div style="color: #A0A0B0; font-size: 0.8em; margin-top: 10px;">
-            <b>Traceability & Academic Source Verification:</b><br>
-            [1] Trudova (2026) | [2] Liu et al. (2015) | [3] Furdui et al. (2021) | [4] Pan et al. (2017)
-        </div>
-        """, unsafe_allow_html=True)
+    # We use <ol> (Ordered List) to keep the [1], [2], [3] indexing automatic
+    # We use CSS (font-size: 0.75em) to ensure full citations don't overwhelm the UI
+    st.markdown("""
+    <div style="color: #A0A0B0; font-size: 0.75em; margin-top: 10px; line-height: 1.4;">
+        <h4 style="color: #779ECB; margin-top: 0; margin-bottom: 5px;">Traceability & Academic Source Verification:</h4>
+        <ol style="padding-left: 20px; margin: 0;">
+            <li style="margin-bottom: 5px;">
+                Trudova, E. (2026). <i>Extracellular vesicles: Biogenesis, co-evolution and insights from parasitology</i> [Doctoral dissertation, Swedish University of Agricultural Sciences]. 
+                <a href="https://stud.epsilon.slu.se/22206/" style="color: #779ECB; text-decoration: none;">https://stud.epsilon.slu.se/22206/</a>
+            </li>
+            <li style="margin-bottom: 5px;">
+                Liu, X., et al. (2015). The effect of hypoxia on mesenchymal stem cell biology. <i>PLoS ONE, 10</i>(5), e0126715. 
+                <a href="https://doi.org/10.1371/journal.pone.0126715" style="color: #779ECB; text-decoration: none;">https://doi.org/10.1371/journal.pone.0126715</a>
+            </li>
+            <li style="margin-bottom: 5px;">
+                Furdui, C. M., et al. (2021). Enhancement of transgene expression by mild hypothermia. <i>Biotechnology Progress, 37</i>(6), e3195. 
+                <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC8469586/" style="color: #779ECB; text-decoration: none;">https://pmc.ncbi.nlm.nih.gov/articles/PMC8469586/</a>
+            </li>
+            <li style="margin-bottom: 5px;">
+                Pan, X., et al. (2017). Metabolic characterization of a CHO cell size increase phase. <i>Applied Microbiology and Biotechnology, 101</i>(23), 8415–8426. 
+                <a href="https://doi.org/10.1007/s00253-017-8531-y" style="color: #779ECB; text-decoration: none;">https://doi.org/10.1007/s00253-017-8531-y</a>
+            </li>
+        </ol>
+    </div>
+    """, unsafe_allow_html=True)
     
     with col2:
         # A standard button, but we manually style it via the button_style hack
@@ -483,4 +502,4 @@ with st.container():
 
 # --- 3. SHOW THE ROADMAP ---
 if st.session_state.show_roadmap:
-    st.info("🚀 **Roadmap in Development:** Cloud API, Sensor Integration, Sensitivity Intervals.")
+    st.info("")
