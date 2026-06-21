@@ -156,8 +156,18 @@ with r1c2:
     st.markdown("### Cellular Viability")
     crit = df[df["Cell Viability (%)"] < 50.0]
     fig = px.line(df, x="Hour", y=["Cell Viability (%)"], color_discrete_sequence=[C_BLUE])
+    
     if not crit.empty: 
-        fig.add_trace(go.Scatter(x=[crit.iloc[0]["Hour"]], y=[crit.iloc[0]["Cell Viability (%)"]], mode='markers', marker=dict(size=12, color=C_STAR, symbol='star')))
+        fig.add_trace(go.Scatter(
+            x=[crit.iloc[0]["Hour"]], 
+            y=[crit.iloc[0]["Cell Viability (%)"]], 
+            mode='markers+text', # Combines marker and label
+            text=['Death Cliff'], 
+            textposition='bottom right', # Orient text below/right of the star
+            textfont=dict(color=C_STAR, size=12, family="sans serif"),
+            marker=dict(size=14, color=C_STAR, symbol='star')
+        ))
+    
     fig.update_layout(height=fixed_height, margin=fixed_margin, showlegend=False)
     st.plotly_chart(fig, use_container_width=True)
     with st.expander("Explore Logic"):
@@ -177,10 +187,22 @@ with r2c1:
 
 with r2c2:
     st.markdown("### Yield Sensitivity Analysis")
-    sens = [model.run_simulation(o2, temp, ph, mix, d, s_o2, s_temp, s_ph)["Therapeutic EVs"].sum() * vol * 1000 * 0.78 * 0.62 for d in range(12, 96, 6)]
-    fig = px.line(x=range(12, 96, 6), y=sens, color_discrete_sequence=[C_GREEN])
-    idx = np.argmax(sens)
-    fig.add_trace(go.Scatter(x=[list(range(12, 96, 6))[idx]], y=[sens[idx]], mode='markers', marker=dict(size=12, color=C_STAR, symbol='star')))
+    sens_range = range(12, 96, 6)
+    sens_data = [model.run_simulation(o2, temp, ph, mix, d, s_o2, s_temp, s_ph)["Therapeutic EVs"].sum() * vol * 1000 * 0.78 * 0.62 for d in sens_range]
+    
+    fig = px.line(x=sens_range, y=sens_data, color_discrete_sequence=[C_GREEN])
+    idx = np.argmax(sens_data)
+    
+    fig.add_trace(go.Scatter(
+        x=[list(sens_range)[idx]], 
+        y=[sens_data[idx]], 
+        mode='markers+text', # Combines marker and label
+        text=['Optimal Harvest'], 
+        textposition='top right', # Orient text above/right of the star
+        textfont=dict(color=C_STAR, size=12, family="sans serif"),
+        marker=dict(size=14, color=C_STAR, symbol='star')
+    ))
+    
     fig.update_layout(height=fixed_height, margin=fixed_margin, showlegend=False)
     st.plotly_chart(fig, use_container_width=True)
     with st.expander("Explore Logic"):
