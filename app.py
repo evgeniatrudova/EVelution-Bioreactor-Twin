@@ -139,12 +139,32 @@ with row1_col1:
 # 2. Cellular Viability (Row 1, Right)
 with row1_col2:
     st.markdown("### Cellular Viability")
+    
+    # Calculate the 'Death Cliff' point (first point viability drops below 20%)
+    viability_data = df["Cell Viability (%)"]
+    critical_points = df[viability_data < 20]
+    
     fig_via = px.line(df, x="Hour", y="Cell Viability (%)")
+    
+    if not critical_points.empty:
+        critical_hour = critical_points.iloc[0]["Hour"]
+        fig_via.add_trace(go.Scatter(
+            x=[critical_hour], y=[viability_data[critical_hour-1]],
+            mode='markers', marker=dict(size=12, color='#E39777', symbol='star'),
+            name='Critical Failure'
+        ))
+    
+    fig_via.update_layout(height=400, margin=dict(t=30, b=0, l=10, r=10), showlegend=False)
     st.plotly_chart(fig_via, use_container_width=True)
+    
     with st.expander("Explore Logic"):
         tab_bio, tab_mod = st.tabs(["Biology", "Model"])
-        tab_bio.markdown("Viability declines due to cumulative metabolic stress and mechanical impeller shear, identifying the culture 'Death Cliff'.")
-        tab_mod.latex(r"\frac{dV}{dt} = -(\kappa_{tox} + \tau_{shear})")
+        tab_bio.markdown("""
+        Cell viability exhibits a rapid collapse once cumulative stress parameters (shear stress and toxic byproduct accumulation) surpass the homeostatic threshold. 
+        
+        This rapid decline is the 'Death Cliff,' where the rate of necrosis outpaces cellular repair mechanisms, signaling the transition from a productive culture to an apoptotic harvest profile.
+        """)
+        tab_mod.latex(r"\frac{dV}{dt} = -(\kappa_{tox} + \tau_{shear}) \quad \text{where } V < V_{threshold}")
 
 
 # Define common layout parameters
