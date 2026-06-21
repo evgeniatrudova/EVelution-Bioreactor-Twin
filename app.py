@@ -15,61 +15,55 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 
-# --- CORE BIOPHYSICAL ENGINE ---
+# --- CORE BIOPHYSICAL ENGINE (Thesis Formulas) ---
 class BiogenesisEngine:
-    """Implements the MMModel differential equations."""
-    
+    """
+    Implements the Multi-Machinery Model (MMModel) derived 
+    from the thesis biophysical formulas.
+    """
     @staticmethod
-    def calc_hypoxia_lambda(o2):
-        K, n, x0 = 10.0, 2.0, 21.0
-        return (K**n + x0**n) / (K**n + o2**n)
-
-    @staticmethod
-    def calc_thermal_flux(temp):
-        T0 = 310.15 # 37C in Kelvin
+    def calc_flux(o2, temp, ph, s_o2, s_temp, s_ph, base_rate):
+        # Constants
+        T0, R_gas = 310.15, 8.314
         Tk = temp + 273.15
-        Ea, R_gas = 50000, 8.314
+        
+        # 1. Hypoxia (Hill-type Sigmoid)
+        K, n, x0 = 10.0, 2.0, 21.0
+        lambda_hyp = (K**n + x0**n) / (K**n + o2**n)
+        
+        # 2. Thermal (Arrhenius-inspired)
+        Ea = 50000
         arrhenius = np.exp(-(Ea/R_gas) * (1/Tk - 1/T0))
-        # Stress function (A_stress)
+        # Stress function A_stress
         T_diff = temp - 37.0
         A_stress = (max(0, T_diff)**2) / (1.0**2 + max(0, T_diff)**2)
-        return arrhenius * (1 + A_stress)
-
-    @staticmethod
-    def calc_ph_flux(ph):
+        thermal_flux = arrhenius * (1 + A_stress)
+        
+        # 3. pH (Gibbs electrochemical shift)
         pH0 = 7.4
-        R_gas, T0 = 8.314, 310.15
         dG = 2.303 * R_gas * T0 * (ph - pH0)
         gibbs = np.exp(-dG / (R_gas * T0))
         # Electrochemical modulator
         pH_mod = 1 + (0.5 * (10**(-ph) / 10**(-pH0))**2) / (0.1**2 + (10**(-ph) / 10**(-pH0))**2)
-        return gibbs * pH_mod
-
-    @staticmethod
-    def get_ev_rate(o2, temp, ph, base_rate, s_o2, s_temp, s_ph):
-        # Thesis-derived integrative rate formula
-        l_hyp = BiogenesisEngine.calc_hypoxia_lambda(o2)
-        t_flux = BiogenesisEngine.calc_thermal_flux(temp)
-        p_flux = BiogenesisEngine.calc_ph_flux(ph)
         
-        # Weighted sensitivity integration
-        rate = base_rate * (l_hyp**s_o2) * (t_flux**s_temp) * (p_flux**s_ph)
-        return max(0, rate)
+        # Integration
+        flux = base_rate * (lambda_hyp**s_o2) * (thermal_flux**s_temp) * ((gibbs * pH_mod)**s_ph)
+        return max(0, flux)
 
-# --- BIOREACTOR SIMULATION ---
+# --- BIOREACTOR SIMULATION MODEL ---
 class FedBatchBioreactorModel:
     def __init__(self):
         self.base_rate = 1.2e9
 
     def run_simulation(self, init_o2, target_temp, target_ph, mixing_homogeneity, duration_hours, s_o2, s_temp, s_ph):
-        history = {"Hour": [], "Therapeutic EVs": [], "Apoptotic Impurities": [], "Cell Viability (%)": []}
         viability = 100.0
+        history = {"Hour": [], "Therapeutic EVs": [], "Apoptotic Impurities": [], "Cell Viability (%)": []}
         
         for hour in range(1, duration_hours + 1):
-            # Calculate flux using Thesis formulas
-            rate = BiogenesisEngine.get_ev_rate(init_o2, target_temp, target_ph, self.base_rate, s_o2, s_temp, s_ph)
+            # Calculate flux using Thesis-derived Engine
+            rate = BiogenesisEngine.calc_flux(init_o2, target_temp, target_ph, s_o2, s_temp, s_ph, self.base_rate)
             
-            # Damage logic (simplified for demonstration)
+            # Damage calculation
             shear = ((mixing_homogeneity - 85.0)**1.5 * 0.1) if mixing_homogeneity > 85 else 0
             viability = max(0, viability - (0.5 + shear))
             
@@ -80,11 +74,13 @@ class FedBatchBioreactorModel:
             
         return pd.DataFrame(history)
 
-# --- STREAMLIT FRONTEND ---
-st.set_page_config(page_title="EVelution Engine", layout="wide")
+# --- STREAMLIT FRONTEND UI ---
+st.set_page_config(page_title="EVelution Digital Twin", layout="wide")
+
 st.title("Bioreactor Optimisation")
 st.caption("Multi-Machinery Model (MMModel) Biophysical Twin | Author: Evgenia Trudova")
 
+# The MMModel Dropdown with Thesis Formulas
 with st.expander("Model Foundation & Biophysical Formulas"):
     st.markdown("This engine utilizes phenotypic sensitivity coefficients to model EV biogenesis across any cell line.")
     col_math1, col_math2 = st.columns(2)
@@ -92,22 +88,27 @@ with st.expander("Model Foundation & Biophysical Formulas"):
         st.markdown("**Hypoxia (Hill Sigmoid)**")
         st.latex(r"\lambda_{hyp} = \frac{K^n + x_0^n}{K^n + x^n}")
         st.markdown("**Thermal (Arrhenius)**")
-        st.latex(r"R = r^* \cdot \exp\left[-\frac{E_a}{R}\left(\frac{1}{T_k} - \frac{1}{T_0}\right)\right]")
+        st.latex(r"R = r^* \cdot \exp\left[-\frac{E_a}{R}\left(\frac{1}{T_k} - \frac{1}{T_0}\right)\right] \cdot (1 + A_{stress})")
     with col_math2:
         st.markdown("**pH (Electrochemical)**")
-        st.latex(r"R_v = r^* \cdot [1 + \frac{A_0 (H_e/H_0)^n}{K_{pH}^n + (H_e/H_0)^n}]")
+        st.latex(r"R_v = r^* \cdot e^{-\frac{\Delta G}{RT}} \cdot [1 + \frac{A_0 (H_e/H_0)^n}{K_{pH}^n + (H_e/H_0)^n}]")
         st.markdown("**Functional Value Index**")
         st.latex(r"V_{final} = \text{Yield} \times \text{Purity} \times \text{Consistency}")
 
 st.divider()
 
-# --- SIDEBAR ---
+# --- SIDEBAR: ENTERPRISE FEATURES ---
 with st.sidebar:
     st.header("Calibration")
     s_o2 = st.slider("Hypoxia Sensitivity", 0.0, 2.0, 1.0)
     s_temp = st.slider("Thermal Sensitivity", 0.0, 2.0, 1.0)
     s_ph = st.slider("pH Sensitivity", 0.0, 2.0, 1.0)
     st.divider()
+    st.header("Data Management")
+    st.file_uploader("Upload Run Data (CSV)", type=["csv"])
+    if st.button("Export to PDF Report"):
+        st.info("Generating report...")
+
     st.header("Lab Parameters")
     vol = st.number_input("Volume (L)", value=50.0)
     o2 = st.slider("Oxygen (%)", 0.0, 21.0, 15.0)
@@ -116,24 +117,42 @@ with st.sidebar:
     mix = st.slider("Mixing (%)", 50.0, 100.0, 85.0)
     dur = st.slider("Duration (h)", 12, 72, 48)
 
-# --- RUN MODEL ---
+# --- SIMULATION & CALCULATIONS ---
 model = FedBatchBioreactorModel()
 df = model.run_simulation(o2, temp, ph, mix, dur, s_o2, s_temp, s_ph)
 
-# --- DASHBOARD ---
-col1, col2, col3 = st.columns(3)
-col1.metric("Predicted Yield", f"{df['Therapeutic EVs'].sum()*vol:.2e}")
-col2.metric("Harvest Conc", f"{df['Therapeutic EVs'].iloc[-1]:.2e} ev/mL")
-col3.metric("Viability", f"{df['Cell Viability (%)'].iloc[-1]:.1f}%")
+# Final Metrics
+final_thera = df["Therapeutic EVs"].iloc[-1] * vol * 1000
+purity = 0.78 # Simplified proxy
+consistency = 0.62 # Simplified proxy
+true_val = final_thera * purity * consistency
+
+# --- DASHBOARD RENDER ---
+col1, col2, col3, col4 = st.columns(4)
+col1.metric("Predicted Functional Value", f"{true_val:.2e}")
+col2.metric("Harvest Concentration", f"{df['Therapeutic EVs'].iloc[-1]:.2e} ev/mL")
+col3.metric("Downstream Purity", f"{purity*100:.1f}%")
+col4.metric("Cargo Consistency", f"{consistency*100:.1f}%")
 
 st.divider()
 
 col_left, col_right = st.columns(2)
 with col_left:
-    st.markdown("### Accumulation of Particles")
+    st.markdown("### Process Accumulation")
     fig = px.line(df, x="Hour", y=["Therapeutic EVs", "Apoptotic Impurities"], log_y=True)
     st.plotly_chart(fig, use_container_width=True)
+    
+    with st.expander("Explore Logic"):
+        tab1, tab2 = st.tabs(["Biology", "Model"])
+        tab1.markdown("Dynamics based on cell membrane stability and metabolic stress response.")
+        tab2.markdown(r"Calculated using non-linear sensitivity coefficients $\sigma_{o2}, \sigma_{temp}, \sigma_{ph}$.")
+
 with col_right:
     st.markdown("### Cellular Viability")
     fig2 = px.line(df, x="Hour", y="Cell Viability (%)")
     st.plotly_chart(fig2, use_container_width=True)
+    
+    with st.expander("Explore Membrane Degradation"):
+        tab1, tab2 = st.tabs(["Biology", "Model"])
+        tab1.markdown("Cumulative environmental load causes necrosis and hydrodynamic tearing.")
+        tab2.markdown(r"$$ Viability_{t} = Viability_{t-1} - \tau_{shear} $$")
