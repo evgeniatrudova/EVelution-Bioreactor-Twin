@@ -418,72 +418,70 @@ with r2c2:
         t1.markdown("Determines the 'sweet spot' for harvest duration. The inflection point occurs where incremental EV gain is offset by culture necrosis and byproduct toxicity.")
         t2.latex(r"\frac{d}{dt}Yield(t) = 0 \quad at \quad t_{optimal}")
 
-# --- THE FOOTER ---
-st.divider()
-
+# --- 1. THE FOOTER CSS ---
 st.markdown("""
 <style>
-/* Main container for the footer */
-.footer-container {
-    position: relative;
+/* 1. Define the Footer Box */
+.footer-box {
     background-color: #1E1E2E;
-    padding: 15px 20px;
+    padding: 20px;
     border-radius: 8px;
-    color: #A0A0B0;
-    font-size: 0.85em;
+    position: relative; /* This allows us to pin the cube relative to this box */
     min-height: 100px;
 }
 
-/* The Easter Egg Cube - Positioned at your 'red smudge' coordinate */
-/* We target the popover button specifically */
+/* 2. The Cube (Targeting the Popover button injected by Streamlit) */
 [data-testid="stPopover"] > button {
     position: absolute;
-    top: 15px; 
-    right: 15px;
+    top: 20px;
+    right: 20px;
     width: 20px !important;
     height: 20px !important;
-    border-radius: 3px !important;
     padding: 0 !important;
-    /* Eevee gradient: Muted Orange to Deep Brown */
-    background: linear-gradient(135deg, #D78A4D, #8B5A2B) !important;
-    border: 1px solid #5C3A1E !important;
-    transition: transform 0.2s;
+    border-radius: 2px !important;
+    /* Base Color: Neutral dark grey */
+    background-color: #2A2A3A !important;
+    /* 3D Depth: 1px top/left, 3px bottom/right */
+    border-top: 1px solid #10101A !important;
+    border-left: 1px solid #10101A !important;
+    border-right: 3px solid #000000 !important;
+    border-bottom: 3px solid #000000 !important;
+    transition: background-color 0.4s ease, border-color 0.4s ease;
 }
 
+/* 3. The "Found" Effect (Hover to Eevee Orange) */
 [data-testid="stPopover"] > button:hover {
-    transform: scale(1.1);
+    background-color: #D78A4D !important;
+    border-color: #A66A3B !important;
 }
 
+/* Remove default icon */
 [data-testid="stPopover"] > button > div { display: none; }
-
-/* Clean Academic List */
-.academic-refs {
-    list-style-type: none;
-    margin: 0;
-    padding: 0;
-}
-.academic-refs li {
-    margin-bottom: 5px;
-}
 </style>
-
-<div class="footer-container">
-    <h4 style="color: #779ECB; margin-top: 0;">Traceability & Academic Source Verification:</h4>
-    <ul class="academic-refs">
-        <li><b>[1] Core Engine:</b> Trudova, E. (2026). <a href="https://stud.epsilon.slu.se/22206/" target="_blank" style="color: #779ECB;"><i>EV Biogenesis...</i></a></li>
-        <li><b>[2] MSCs:</b> Liu et al. (2015). <a href="https://doi.org/10.1371/journal.pone.0126715" target="_blank" style="color: #779ECB;"><i>Hypoxia & MSC Biology (PLoS One)</i></a></li>
-        <li><b>[3] HEK293T:</b> Furdui et al. (2021). <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC8469586/" target="_blank" style="color: #779ECB;"><i>Mild Hypothermia (Biotechnol Prog)</i></a></li>
-        <li><b>[4] CHO-K1:</b> Pan et al. (2017). <a href="https://doi.org/10.1007/s00253-017-8531-y" target="_blank" style="color: #779ECB;"><i>Metabolic Characterization</i></a></li>
-    </ul>
-</div>
 """, unsafe_allow_html=True)
 
-# The Popover (The Easter Egg functionality)
-# We place this outside the markdown div so it renders as a clickable element
+# --- 2. THE FOOTER RENDER ---
 with st.container():
-    # We put the popover trigger inside an empty column that matches the CSS position
-    # The CSS class applied to [data-testid="stPopover"] will move it to the right spot.
+    st.markdown('<div class="footer-box">', unsafe_allow_html=True)
+    
+    # Title
+    st.markdown('<h4 style="color: #779ECB; margin-top: 0;">Traceability & Academic Source Verification:</h4>', unsafe_allow_html=True)
+    
+    # Academic List
+    st.markdown("""
+    <ul style="color: #A0A0B0; font-size: 0.85em; list-style-type: none; padding-left: 0;">
+        <li><b>[1] Core Engine:</b> Trudova, E. (2026). <a href="https://stud.epsilon.slu.se/22206/" style="color: #779ECB;"><i>EV Biogenesis...</i></a></li>
+        <li><b>[2] MSCs:</b> Liu et al. (2015). <a href="https://doi.org/10.1371/journal.pone.0126715" style="color: #779ECB;"><i>Hypoxia & MSCs</i></a></li>
+        <li><b>[3] HEK293T:</b> Furdui et al. (2021). <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC8469586/" style="color: #779ECB;"><i>Mild Hypothermia</i></a></li>
+        <li><b>[4] CHO-K1:</b> Pan et al. (2017). <a href="https://doi.org/10.1007/s00253-017-8531-y" style="color: #779ECB;"><i>Metabolic Characterization</i></a></li>
+    </ul>
+    """, unsafe_allow_html=True)
+    
+    # The Popover Trigger (The Cube)
+    # We place this here so it is inside the 'footer-box' flow
     with st.popover(" "):
-        st.subheader("Roadmap in Development")
+        st.subheader("🚀 Roadmap in Development")
         st.progress(0.15)
-        st.write("")
+        st.write("Targeting: Cloud API, Sensor Integration, Sensitivity Intervals.")
+        
+    st.markdown('</div>', unsafe_allow_html=True)
