@@ -418,7 +418,6 @@ with r2c2:
         t1.markdown("Determines the 'sweet spot' for harvest duration. The inflection point occurs where incremental EV gain is offset by culture necrosis and byproduct toxicity.")
         t2.latex(r"\frac{d}{dt}Yield(t) = 0 \quad at \quad t_{optimal}")
 
-import streamlit as st
 
 # --- 1. CSS FOR THE CUBE ---
 st.markdown("""
