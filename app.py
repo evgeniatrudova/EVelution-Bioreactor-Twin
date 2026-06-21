@@ -60,7 +60,7 @@ class FedBatchBioreactorModel:
 # --- STREAMLIT FRONTEND ---
 st.set_page_config(page_title="EVelution Digital Twin", layout="wide")
 st.title("Bioreactor Optimisation")
-st.caption("Multi-Machinery Model (MMModel) Biophysical Twin")
+st.caption("Multi-Machinery Model Bioreactor Twin")
 
 # 1. Global Expander: MMModel
 with st.expander("MMModel Formulas"):
@@ -120,7 +120,7 @@ st.write(f"**Goal Progress: {completion:.1f}%**")
 
 # --- DASHBOARD VISUALIZATION GRID ---
 st.divider()
-st.subheader("Process Analytics")
+st.subheader("Analytics")
 
 # Create two rows of two columns each
 row1_col1, row1_col2 = st.columns(2)
@@ -128,7 +128,7 @@ row2_col1, row2_col2 = st.columns(2)
 
 # 1. Process Accumulation (Row 1, Left)
 with row1_col1:
-    st.markdown("### Process Accumulation")
+    st.markdown("### Process ")
     fig_acc = px.line(df, x="Hour", y=["Therapeutic EVs", "Stress-Altered EVs", "Apoptotic Impurities"], log_y=True)
     st.plotly_chart(fig_acc, use_container_width=True)
     with st.expander("Explore Logic"):
