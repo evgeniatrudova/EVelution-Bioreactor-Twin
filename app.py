@@ -79,7 +79,7 @@ with st.expander("🔬 Model Infrastructure & Definitions"):
     with col2:
         st.markdown("**Downstream Purity**: Represents the efficiency of the purification workflow (TFF/Chromatography). It is modeled as a recovery coefficient ($\eta_{purity}$) defining the fraction of vesicles retained.")
         st.markdown("**Cargo Consistency**: A quality index denoting the percentage of EVs that contain the active therapeutic payload. This coefficient ($\phi_{consistency}$) corrects the raw yield for mis-loaded vesicles.")
-    st.latex(r"Metrics \quad \{Yield, \Phi, \eta_{purity}, \phi_{consistency}\}")
+   
 
 # Sidebar
 with st.sidebar:
