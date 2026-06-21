@@ -73,14 +73,26 @@ with st.expander("MMModel Formulas"):
         st.markdown("**pH (Electrochemical)**")
         st.latex(r"R_v = r^* \cdot e^{-\frac{\Delta G}{RT}} \cdot [1 + \frac{A_0 (H_e/H_0)^n}{K_{pH}^n + (H_e/H_0)^n}]")
 
-# 2. Global Expander: Dashboard Metrics
 with st.expander("Dashboard Metrics"):
-    tab1, tab2 = st.tabs(["Biological Context", "Mathematical Model"])
-    tab1.write("Yield Performance measures total therapeutic output adjusted for downstream losses. Harvest Conc is the density at endpoint, while Purity and Consistency represent fixed technical constraints of your purification pipeline.")
-    tab2.latex(r"Yield_{final} = \left( \sum_{t=0}^{t_{dur}} \Phi_{thera}(t) \times Vol \right) \times \eta_{purity} \times \phi_{consistency}")
-
+    tab_bio, tab_mod = st.tabs(["Biology", "Model"])
+    
+    with tab_bio:
+        st.markdown("""
+        * **Yield Performance:** The total quantity of therapeutic EVs projected at the end of the full process. It is calculated by summing the cumulative production flux over the bioreactor run, scaled by vessel volume, and adjusted for recovery and loading efficiencies.
+        * **Harvest Conc:** The concentration of EVs present in the bioreactor at the moment of harvest. It is calculated as the instantaneous production flux observed at the final simulation hour, prior to any purification.
+        * **Downstream Purity:** An efficiency index for the purification workflow (e.g., TFF or chromatography). It is calculated as a fixed recovery coefficient representing the fraction of vesicles retained during processing.
+        * **Cargo Consistency:** A quality index denoting the percentage of EVs that contain the target therapeutic payload. It is calculated as a fixed coefficient applied to the final yield to account for empty or mis-loaded vesicles.
+        """)
+    
+    with tab_mod:
+        st.markdown("### Process Formulas")
+        st.latex(r"Y_{perf} = \left( \sum_{t=1}^{t_{dur}} \Phi_{thera}(t) \cdot V_{react} \right) \cdot \eta_{purity} \cdot \phi_{consistency}")
+        st.markdown("---")
+        st.latex(r"C_{harvest} = \Phi_{thera}(t_{final})")
+        st.markdown("---")
+        st.latex(r"\text{Where } \eta_{purity} \text{ is the recovery efficiency and } \phi_{consistency} \text{ is the loading factor.}")
+        
 st.divider()
-
 # --- SIDEBAR ---
 with st.sidebar:
     st.header("Cell Line Sensitivity")
