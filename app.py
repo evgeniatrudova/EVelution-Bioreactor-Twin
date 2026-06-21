@@ -71,9 +71,9 @@ st.title("EVelution Bioreactor Optimisation")
 st.caption("Multi-Machinery Model (MMModel) | Default Cell Line: MSC | Author: Evgenia Trudova")
 
 # Metric Definition Expander
- with st.expander("Formula Library", expanded=False):
+ with st.expander("Explore Logic", expanded=False):
     # Tabbed view keeps the UI clean and avoids 'wall of text'
-    tab_bio, tab_math = st.tabs(["Biology (Context)", "Model (Manual Calc)"])
+    tab_bio, tab_math = st.tabs(["Biology", "Model"])
 
     with tab_bio:
         st.markdown("""
@@ -84,11 +84,11 @@ st.caption("Multi-Machinery Model (MMModel) | Default Cell Line: MSC | Author: E
         """)
 
     with tab_math:
-        st.markdown("### Student Calculation Guide")
-        st.latex(r"1. \text{ Yield Performance: } Y_{perf} = \left( \sum_{t=1}^{T} \Phi(t) \cdot V_{react} \right) \cdot \eta_{purity} \cdot \phi_{consistency}")
-        st.latex(r"2. \text{ Harvest Conc: } \Phi_{final} = \Phi(t_{harvest})")
-        st.latex(r"3. \text{ Purity: } \eta_{purity} = \frac{EV_{purified}}{EV_{crude}}")
-        st.latex(r"4. \text{ Consistency: } \phi_{consistency} = \frac{EV_{loaded}}{EV_{total}}")
+        st.markdown("")
+        st.latex(r" \text{ Yield Performance: } Y_{perf} = \left( \sum_{t=1}^{T} \Phi(t) \cdot V_{react} \right) \cdot \eta_{purity} \cdot \phi_{consistency}")
+        st.latex(r" \text{ Harvest Conc: } \Phi_{final} = \Phi(t_{harvest})")
+        st.latex(r" \text{ Purity: } \eta_{purity} = \frac{EV_{purified}}{EV_{crude}}")
+        st.latex(r" \text{ Consistency: } \phi_{consistency} = \frac{EV_{loaded}}{EV_{total}}")
 
 # Sidebar
 with st.sidebar:
