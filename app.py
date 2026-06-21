@@ -418,70 +418,80 @@ with r2c2:
         t1.markdown("Determines the 'sweet spot' for harvest duration. The inflection point occurs where incremental EV gain is offset by culture necrosis and byproduct toxicity.")
         t2.latex(r"\frac{d}{dt}Yield(t) = 0 \quad at \quad t_{optimal}")
 
-# --- 1. THE FOOTER CSS ---
+# --- THE FOOTER ---
+st.divider()
+
 st.markdown("""
 <style>
-/* 1. Define the Footer Box */
+/* 1. Force the Footer Box to behave */
 .footer-box {
-    background-color: #1E1E2E;
-    padding: 20px;
-    border-radius: 8px;
-    position: relative; /* This allows us to pin the cube relative to this box */
-    min-height: 100px;
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: space-between !important;
+    align-items: flex-start !important;
+    background-color: #1E1E2E !important;
+    padding: 20px !important;
+    border-radius: 8px !important;
+    position: relative !important;
 }
 
-/* 2. The Cube (Targeting the Popover button injected by Streamlit) */
+/* 2. Force the Popover Button to be the tiny cube */
+/* We target the exact Streamlit button ID to override their default sizing */
 [data-testid="stPopover"] > button {
-    position: absolute;
-    top: 20px;
-    right: 20px;
+    min-width: 20px !important;
     width: 20px !important;
     height: 20px !important;
     padding: 0 !important;
+    margin: 0 !important;
     border-radius: 2px !important;
-    /* Base Color: Neutral dark grey */
     background-color: #2A2A3A !important;
-    /* 3D Depth: 1px top/left, 3px bottom/right */
     border-top: 1px solid #10101A !important;
     border-left: 1px solid #10101A !important;
     border-right: 3px solid #000000 !important;
     border-bottom: 3px solid #000000 !important;
-    transition: background-color 0.4s ease, border-color 0.4s ease;
+    transition: all 0.3s ease !important;
 }
 
-/* 3. The "Found" Effect (Hover to Eevee Orange) */
+/* 3. The Hover Effect */
 [data-testid="stPopover"] > button:hover {
     background-color: #D78A4D !important;
     border-color: #A66A3B !important;
 }
 
-/* Remove default icon */
-[data-testid="stPopover"] > button > div { display: none; }
+/* 4. Hide default text inside the button */
+[data-testid="stPopover"] > button div { display: none !important; }
+
+/* 5. Ensure the container stays aligned */
+.academic-text {
+    flex: 1;
+    color: #A0A0B0;
+    font-size: 0.85em;
+}
 </style>
 """, unsafe_allow_html=True)
 
-# --- 2. THE FOOTER RENDER ---
+# --- THE RENDER ---
 with st.container():
     st.markdown('<div class="footer-box">', unsafe_allow_html=True)
     
-    # Title
-    st.markdown('<h4 style="color: #779ECB; margin-top: 0;">Traceability & Academic Source Verification:</h4>', unsafe_allow_html=True)
-    
-    # Academic List
+    # Left Text Column
     st.markdown("""
-    <ul style="color: #A0A0B0; font-size: 0.85em; list-style-type: none; padding-left: 0;">
-        <li><b>[1] Core Engine:</b> Trudova, E. (2026). <a href="https://stud.epsilon.slu.se/22206/" style="color: #779ECB;"><i>EV Biogenesis...</i></a></li>
-        <li><b>[2] MSCs:</b> Liu et al. (2015). <a href="https://doi.org/10.1371/journal.pone.0126715" style="color: #779ECB;"><i>Hypoxia & MSCs</i></a></li>
-        <li><b>[3] HEK293T:</b> Furdui et al. (2021). <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC8469586/" style="color: #779ECB;"><i>Mild Hypothermia</i></a></li>
-        <li><b>[4] CHO-K1:</b> Pan et al. (2017). <a href="https://doi.org/10.1007/s00253-017-8531-y" style="color: #779ECB;"><i>Metabolic Characterization</i></a></li>
-    </ul>
+    <div class="academic-text">
+        <h4 style="color: #779ECB; margin-top: 0;">Traceability & Academic Source Verification:</h4>
+        <ul style="list-style-type: none; padding-left: 0;">
+            <li><b>[1] Core Engine:</b> <a href="https://stud.epsilon.slu.se/22206/" style="color: #779ECB;">Trudova (2026)</a></li>
+            <li><b>[2] MSCs:</b> <a href="https://doi.org/10.1371/journal.pone.0126715" style="color: #779ECB;">Liu et al. (2015)</a></li>
+            <li><b>[3] HEK293T:</b> <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC8469586/" style="color: #779ECB;">Furdui et al. (2021)</a></li>
+            <li><b>[4] CHO-K1:</b> <a href="https://doi.org/10.1007/s00253-017-8531-y" style="color: #779ECB;">Pan et al. (2017)</a></li>
+        </ul>
+    </div>
     """, unsafe_allow_html=True)
     
-    # The Popover Trigger (The Cube)
-    # We place this here so it is inside the 'footer-box' flow
+    # Right Cube (Popover)
     with st.popover(" "):
-        st.subheader("🚀 Roadmap in Development")
-        st.progress(0.15)
+        st.subheader("🚀 Roadmap")
         st.write("Targeting: Cloud API, Sensor Integration, Sensitivity Intervals.")
+        
+    st.markdown('</div>', unsafe_allow_html=True)
         
     st.markdown('</div>', unsafe_allow_html=True)
