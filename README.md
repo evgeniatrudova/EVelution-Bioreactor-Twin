@@ -9,23 +9,37 @@
 
 
 <a href="https://evelution-bio.streamlit.app/">
-  <img width="1852" height="777" alt="Evelution Bio App" src="https://github.com/user-attachments/assets/ff37be63-63e1-4fee-8407-3510ed58de5c" />
+  <img src="https://github.com/user-attachments/assets/e7835b2e-0b08-40bd-9c7f-7e5ac7b9783f" 
+       alt="Evelution Bio App" 
+       width="1000" />
 </a>
 
+EVelution-bio is a predictive bioinformatics and process engineering suite designed to optimize the production of therapeutic extracellular vesicles. By creating a digital twin of the bioreactor environment, EVelution-bio allows bioprocess engineers to move away from expensive, iterative physical trial-and-error, transitioning instead toward predictive bioprocess intelligence.
 
-EVelution-bio is a digital twin and predictive bioinformatics tool designed for the optimization of extracellular Vesicle biomanufacturing. EVelution-bio bridges upstream cell biology and downstream process engineering, helping reduce the costs of physical trial-and-error. By simulating the precise environmental stressors  (hypoxia, thermal shifts, and hydrodynamic shear), the application calculates where therapeutic yield is maximized before cellular viability collapses.
+The "Yield-to-Value" Paradigm
+The bioprocessing industry currently faces a critical blind spot: optimizing scale-up runs based on raw Nanoparticle Tracking Analysis (NTA) scatter counts. This creates a deceptive "vanity metric"—total particle counts often hide high concentrations of apoptotic debris and empty vesicles.
 
-The bioprocessing industry currently suffers from a critical blind spot: optimizing scale-up runs based on raw NTA (Nanoparticle Tracking Analysis) scatter counts. EVelution introduces the Yield-to-Value Bridge, a mathematical framework that deconstructs raw particle counts by severely penalizing the batch for empty cargo and apoptotic debris. Instead of showing a deceptive "total count," EVelution tracks the True Functional Value—isolating only the structurally intact, therapeutically aligned EVs that will survive downstream filtration and chromatography.
+EVelution-bio introduces the Yield-to-Value Bridge, a mathematical framework that deconstructs raw production data. By penalizing batches for non-functional cargo and necrotic byproducts, our model calculates the True Functional Value—isolating only the structurally intact, therapeutically active EVs that will survive downstream processing (DSP).
 
-Current scale-up strategies often falsely assume EV secretion is a static baseline. The underlying Multi-Machinery Model challenges this by mathematically modeling biogenesis as a dynamically regulated, multi-pathway survival network.
+The Engine: Multi-Machinery Model (MMModel)
+Unlike static growth models, EVelution-bio is powered by the Multi-Machinery Model, it treats EV biogenesis not as a fixed baseline, but as a dynamically regulated, multi-pathway survival network. Our engine simulates the biophysical impact of environmental stressors—including hypoxia, thermal flux, and hydrodynamic shear—to determine the precise kinetic harvest window before cellular homeostatic repair mechanisms collapse.
 
-Uses: 
-The "Reality Check"
-Bioprocess engineers often develop high-yield protocols in wet lab flasks that fail when scaled up. 
-Engineers can input their target yield and the specific bioreactor volume to see if their process is physically achievable. The app functions as a "sanity check" to determine if they need to increase tank volume or refine their feeding strategy, preventing the waste.
+Applications
+1. Upstream Planning
+Scale-up failures often originate in the gap between "wet lab" bench success and industrial production. EVelution-bio functions as a feasibility checkpoint, allowing engineers to input target yields and reactor geometries to stress-test their protocols before committing to a run. This identifies whether a feeding strategy or tank volume is physically viable, preventing costly batch failures before they happen.
 
-QC Troubleshooting
-When a batch fails downstream quality control, the root cause is often "invisible" because the NTA machine only counts particles—it doesn't distinguish between therapeutic EVs and apoptotic debris.Engineers can upload historical CSV run data into the app. By overlaying physical data with the digital twin's kinetic predictions, they can pinpoint exactly which hour the "Death Cliff" occurred. This identifies whether the batch was ruined by an oxygen-starved "dead zone" or if it was ruined by over-agitation creating hydrodynamic shear.
+2. Root Cause QC
+When a batch fails downstream quality control, traditional NTA analytics offer no diagnostic depth. EVelution-bio enables historical run reconstruction:
+
+3. Research. 
+Analysis of historical CSV data to be mirrored against the digital twin’s kinetic predictions.
+
+5. Death Cliff Identification
+The platform pinpoints the exact hour of culture collapse, allowing users to distinguish between batches ruined by oxygen-starved "dead zones" versus those degraded by over-agitation and hydrodynamic shear.
+
+6. Sensitivity Analytics
+Users can identify the "optimal spot" for harvest duration, where incremental EV yield is perfectly balanced against the onset of culture necrosis.
+
 
 
 
