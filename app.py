@@ -253,15 +253,16 @@ with st.sidebar:
             st.success(f"☑️ Benchmark active! Loaded {len(historical_df)} data points.")
         except Exception as e:
             st.error(f"Could not read the file. Error: {e}")
-
+    
     # ==========================================
-    # 3. THE UX-DESIGNED DELETE BUTTON
+    # 3. DELETE BUTTON
     # ==========================================
     # Check if data exists to toggle the disabled state
     has_data = st.session_state.get('historical_df') is not None
     
-    # Render standard button (matches 'Download PDF' style) and disable if empty
-    if st.button("Delete", disabled=not has_data):
+    # FIX: Adding use_container_width=True forces the button's edges to perfectly 
+    # snap to the grid alignment of the file uploader above it.
+    if st.button("Delete", disabled=not has_data, use_container_width=True):
         # Wipe the data from memory
         st.session_state['historical_df'] = None
         # Wipe the file from the uploader widget
