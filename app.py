@@ -15,16 +15,15 @@ import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
 
+# --- 1. THEME OVERRIDE ---
 st.markdown("""
 <style>
-    /* Custom Pastel/Dark Theme */
     :root {
-        --primary-color: #77DD77; /* Bright Pastel Green */
+        --primary-color: #77DD77;
         --background-color: #0E1117;
         --secondary-background-color: #1E1E2E;
         --text-color: #E0E0E0;
     }
-    /* Hide default streamlit header/footer for cleaner UI */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
 </style>
@@ -33,17 +32,10 @@ st.markdown("""
 # --- 2. LAYOUT & COLOR CONFIGURATION ---
 fixed_height = 400
 fixed_margin = dict(t=40, b=10, l=20, r=20)
-# Pastel Palette
-C_GREEN = "#77DD77"  # Therapeutic / Success
-C_BLUE = "#779ECB"   # Apoptotic / Baseline
-C_PURPLE = "#B39EB5" # Stress-Altered
-C_STAR = "#E39777"   # Alert/Marker
-
-st.divider()
-st.subheader("Analytics")
-
-row1_col1, row1_col2 = st.columns(2)
-row2_col1, row2_col2 = st.columns(2)
+C_GREEN = "#77DD77"
+C_BLUE = "#779ECB"
+C_PURPLE = "#B39EB5"
+C_STAR = "#E39777"
 
 # --- CORE BIOPHYSICAL ENGINE ---
 class BiogenesisEngine:
@@ -68,6 +60,7 @@ class BiogenesisEngine:
 # --- BIOREACTOR SIMULATION MODEL ---
 class FedBatchBioreactorModel:
     def __init__(self):
+        # Base rate calibrated for MSC metabolic flux
         self.base_rate = 1.2e9
 
     def run_simulation(self, init_o2, target_temp, target_ph, mixing_homogeneity, duration_hours, s_o2, s_temp, s_ph):
@@ -87,56 +80,53 @@ class FedBatchBioreactorModel:
             history["Cell Viability (%)"].append(viability)
         return pd.DataFrame(history)
 
-# --- STREAMLIT FRONTEND ---
+# --- STREAMLIT FRONTEND UI ---
 st.set_page_config(page_title="EVelution Digital Twin", layout="wide")
 st.title("Bioreactor Optimisation")
-st.caption("Multi-Machinery Model Bioreactor Twin")
+st.caption("Multi-Machinery Model (MMModel) Biophysical Twin | **Cell Line: MSC (Mesenchymal Stem Cell)** | Author: Evgenia Trudova")
 
-# 1. Global Expander: MMModel
-with st.expander("MMModel Formulas"):
+# --- EXPANDERS ---
+with st.expander("🔬 MSC Model Foundation & Biophysical Formulas"):
+    st.markdown("The default simulation parameters are calibrated for **Mesenchymal Stem Cells (MSCs)**. Sensitivity coefficients reflect MSC metabolic flux and membrane vulnerability to sheer stress.")
     c1, c2 = st.columns(2)
     with c1:
-        st.markdown("**Hypoxia (Hill Sigmoid)**")
-        st.latex(r"\lambda_{hyp} = \frac{K^n + x_0^n}{K^n + x^n}")
-        st.markdown("**Thermal (Arrhenius)**")
-        st.latex(r"R = r^* \cdot \exp\left[-\frac{E_a}{R}\left(\frac{1}{T_k} - \frac{1}{T_0}\right)\right] \cdot (1 + A_{stress})")
+        st.markdown("**Hypoxia (Hill Sigmoid)**"); st.latex(r"\lambda_{hyp} = \frac{K^n + x_0^n}{K^n + x^n}")
+        st.markdown("**Thermal (Arrhenius)**"); st.latex(r"R = r^* \cdot \exp\left[-\frac{E_a}{R}\left(\frac{1}{T_k} - \frac{1}{T_0}\right)\right] \cdot (1 + A_{stress})")
     with c2:
-        st.markdown("**pH (Electrochemical)**")
-        st.latex(r"R_v = r^* \cdot e^{-\frac{\Delta G}{RT}} \cdot [1 + \frac{A_0 (H_e/H_0)^n}{K_{pH}^n + (H_e/H_0)^n}]")
+        st.markdown("**pH (Electrochemical)**"); st.latex(r"R_v = r^* \cdot e^{-\frac{\Delta G}{RT}} \cdot [1 + \frac{A_0 (H_e/H_0)^n}{K_{pH}^n + (H_e/H_0)^n}]")
+        st.markdown("**Functional Value Index**"); st.latex(r"V_{final} = \text{Yield} \times \text{Purity} \times \text{Consistency}")
 
-with st.expander("Dashboard Metrics"):
+with st.expander("📊 Dashboard Metrics Breakdown"):
     tab_bio, tab_mod = st.tabs(["Biology", "Model"])
-    
-    with tab_bio:
-        st.markdown("""
-        * **Yield Performance:** The total quantity of therapeutic EVs projected at the end of the full process. It is calculated by summing the cumulative production flux over the bioreactor run, scaled by vessel volume, and adjusted for recovery and loading efficiencies.
-        * **Harvest Conc:** The concentration of EVs present in the bioreactor at the moment of harvest. It is calculated as the instantaneous production flux observed at the final simulation hour, prior to any purification.
-        * **Downstream Purity:** An efficiency index for the purification workflow (e.g., TFF or chromatography). It is calculated as a fixed recovery coefficient representing the fraction of vesicles retained during processing.
-        * **Cargo Consistency:** A quality index denoting the percentage of EVs that contain the target therapeutic payload. It is calculated as a fixed coefficient applied to the final yield to account for empty or mis-loaded vesicles.
-        """)
-    
-    with tab_mod:
-        st.markdown("### Process Formulas")
-        st.latex(r"Y_{perf} = \left( \sum_{t=1}^{t_{dur}} \Phi_{thera}(t) \cdot V_{react} \right) \cdot \eta_{purity} \cdot \phi_{consistency}")
-        st.markdown("---")
-        st.latex(r"C_{harvest} = \Phi_{thera}(t_{final})")
-        st.markdown("---")
-        st.latex(r"\text{Where } \eta_{purity} \text{ is the recovery efficiency and } \phi_{consistency} \text{ is the loading factor.}")
-        
-st.divider()
+    tab_bio.markdown("""
+    * **Yield Performance:** Total projected therapeutic EV quantity post-DSP. Calculated by summing the hourly production flux ($\Phi$) over duration, scaled by volume, and adjusted for recovery/loading efficiency.
+    * **Harvest Conc:** Concentration of EVs in the bioreactor at harvest. Calculated as the instantaneous flux ($\Phi$) at the final simulation hour.
+    * **Downstream Purity:** Efficiency index for purification workflow. Calculated as a fixed recovery coefficient ($\eta_{purity}$).
+    * **Cargo Consistency:** Quality index representing therapeutic payload loading. Calculated as a fixed loading coefficient ($\phi_{consistency}$).
+    """)
+    tab_mod.latex(r"Y_{perf} = \left( \sum_{t=1}^{t_{dur}} \Phi_{thera}(t) \cdot V_{react} \right) \cdot \eta_{purity} \cdot \phi_{consistency}")
+
 # --- SIDEBAR ---
 with st.sidebar:
-    st.header("Cell Line Sensitivity")
-    s_o2, s_temp, s_ph = st.slider("Hypoxia", 0.0, 2.0, 1.2), st.slider("Temperature", 0.0, 2.0, 0.8), st.slider("pH", 0.0, 2.0, 0.9)
-    st.header("Experimental")
-    vol, o2, temp, ph, mix, dur = st.number_input("Volume (L)", 50.0), st.slider("Oxygen (%)", 0.0, 21.0, 21.0), st.slider("Temp (°C)", 30.0, 45.0, 37.0), st.slider("pH", 6.0, 8.0, 7.4), st.slider("Mixing (%)", 50.0, 100.0, 85.0), st.slider("Duration (h)", 12, 72, 48)
-    st.header("Yield")
-    target_yield = st.number_input("Desired Yield", value=1e15, format="%.1e")
+    st.header("1. MSC Sensitivity Calibration")
+    s_o2 = st.slider("Hypoxia Sensitivity", 0.0, 2.0, 1.2)
+    s_temp = st.slider("Thermal Sensitivity", 0.0, 2.0, 0.8)
+    s_ph = st.slider("pH Sensitivity", 0.0, 2.0, 0.9)
+    st.header("2. Experimental Parameters")
+    vol = st.number_input("Volume (L)", value=50.0)
+    o2 = st.slider("Oxygen (%)", 0.0, 21.0, 21.0)
+    temp = st.slider("Temp (°C)", 30.0, 45.0, 37.0)
+    ph = st.slider("pH", 6.0, 8.0, 7.4)
+    mix = st.slider("Mixing (%)", 50.0, 100.0, 85.0)
+    dur = st.slider("Duration (h)", 12, 72, 48)
+    st.header("3. Target Yield")
+    target_yield = st.number_input("Desired Target Yield", value=1e15, format="%.1e")
 
 # --- SIMULATION ---
 model = FedBatchBioreactorModel()
 df = model.run_simulation(o2, temp, ph, mix, dur, s_o2, s_temp, s_ph)
-true_val = df["Therapeutic EVs"].sum() * vol * 1000 * 0.78 * 0.62
+total_prod = df["Therapeutic EVs"].sum()
+true_val = total_prod * vol * 1000 * 0.78 * 0.62
 completion = (true_val / target_yield) * 100
 
 # --- METRIC DISPLAY ---
@@ -146,30 +136,25 @@ m2.metric("Harvest Conc", f"{df['Therapeutic EVs'].iloc[-1]:.2e} ev/mL")
 m3.metric("Downstream Purity", "78.0%")
 m4.metric("Cargo Consistency", "62.0%")
 st.progress(min(completion / 100, 1.0))
-st.write(f"**Goal Progress: {completion:.1f}%**")
+st.markdown(f"**Goal Progress: {completion:.1f}%**")
+
+# --- ANALYTICS GRID ---
 st.divider()
 st.subheader("Analytics")
-
 row1_col1, row1_col2 = st.columns(2)
 row2_col1, row2_col2 = st.columns(2)
 
-# 1. Process Accumulation (Row 1, Left)
 with row1_col1:
     st.markdown("### Process Accumulation")
-    fig_acc = px.line(
-        df, x="Hour", 
-        y=["Therapeutic EVs", "Stress-Altered EVs", "Apoptotic Impurities"], 
-        log_y=True,
-        color_discrete_map={"Therapeutic EVs": C_GREEN, "Stress-Altered EVs": C_PURPLE, "Apoptotic Impurities": C_BLUE}
-    )
+    fig_acc = px.line(df, x="Hour", y=["Therapeutic EVs", "Stress-Altered EVs", "Apoptotic Impurities"], log_y=True,
+                      color_discrete_map={"Therapeutic EVs": C_GREEN, "Stress-Altered EVs": C_PURPLE, "Apoptotic Impurities": C_BLUE})
     fig_acc.update_layout(height=fixed_height, margin=fixed_margin)
     st.plotly_chart(fig_acc, use_container_width=True)
     with st.expander("Explore Logic"):
         tab_bio, tab_mod = st.tabs(["Biology", "Model"])
-        tab_bio.markdown("Tracks the crossover point between therapeutic EVs and necrotic debris. Harvesting past this point drastically increases purification bottlenecks due to elevated impurity loads.")
+        tab_bio.markdown("Tracks the crossover point between therapeutic EVs and necrotic debris. Harvesting past this point drastically increases purification bottlenecks.")
         tab_mod.latex(r"\Phi_{total} = \Phi_{Therapeutic} + \Phi_{Stress} + \Phi_{Apoptotic}")
 
-# 2. Cellular Viability (Row 1, Right)
 with row1_col2:
     st.markdown("### Cellular Viability")
     crit = df[df["Cell Viability (%)"] < 50.0]
@@ -180,10 +165,9 @@ with row1_col2:
     st.plotly_chart(fig_via, use_container_width=True)
     with st.expander("Explore Logic"):
         tab_bio, tab_mod = st.tabs(["Biology", "Model"])
-        tab_bio.markdown("The 'Death Cliff': Viability collapses once cumulative shear stress and byproduct toxicity exceed homeostatic repair capacity.")
+        tab_bio.markdown("The 'Death Cliff': Viability collapses once cumulative stress parameters surpass homeostatic repair capacity, signaling an apoptotic harvest profile.")
         tab_mod.latex(r"\frac{dV}{dt} = -(\kappa_{tox} + \tau_{shear})")
 
-# 3. Yield-to-Value Bridge (Row 2, Left)
 with row2_col1:
     st.markdown("### Yield-to-Value Bridge")
     raw = true_val / (0.78 * 0.62)
@@ -192,15 +176,14 @@ with row2_col1:
     st.plotly_chart(fig_funnel, use_container_width=True)
     with st.expander("Explore Logic"):
         tab_bio, tab_mod = st.tabs(["Biology", "Model"])
-        tab_bio.markdown("Visualizes mass balance cascade. Horizontal width is proportional to EV quantity. The narrowing intervals signify recovery losses during downstream processing (DSP).")
+        tab_bio.markdown("Visualizes mass balance cascade. Horizontal width represents yield per stage; narrowing intervals illustrate downstream processing losses.")
         tab_mod.latex(r"V_{final} = Yield_{raw} \cdot \eta_{purity} \cdot \phi_{consistency}")
 
-# 4. Yield Sensitivity (Row 2, Right)
 with row2_col2:
     st.markdown("### Yield Sensitivity Analysis")
     dur_rng = range(12, 96, 6)
     sens_data = [model.run_simulation(o2, temp, ph, mix, d, s_o2, s_temp, s_ph)["Therapeutic EVs"].sum() * vol * 1000 * 0.78 * 0.62 for d in dur_rng]
-    fig_sens = px.line(x=list(dur_rng), y=sens_data, color_discrete_sequence=[C_GREEN])
+    fig_sens = px.line(x=list(dur_rng), y=sens_data, labels={'x': 'Duration (h)', 'y': 'Total Yield'}, color_discrete_sequence=[C_GREEN])
     idx = np.argmax(sens_data)
     fig_sens.add_trace(go.Scatter(x=[list(dur_rng)[idx]], y=[sens_data[idx]], mode='markers', marker=dict(size=12, color=C_STAR, symbol='star')))
     fig_sens.update_layout(height=fixed_height, margin=fixed_margin, showlegend=False)
@@ -208,4 +191,4 @@ with row2_col2:
     with st.expander("Explore Logic"):
         tab_bio, tab_mod = st.tabs(["Biology", "Model"])
         tab_bio.markdown("Identifies the metabolic harvest inflection point. Optimal duration is where incremental production is balanced by cell death.")
-        tab_mod.latex(r"\frac{d}{dt}Yield(t) = 0")
+        tab_mod.latex(r"\frac{d}{dt}Yield(t) = 0 \text{ at } t_{optimal}")
