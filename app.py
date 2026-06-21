@@ -118,10 +118,6 @@ m4.metric("Cargo Consistency", "62.0%")
 st.progress(min(completion / 100, 1.0))
 st.write(f"**Goal Progress: {completion:.1f}%**")
 
-import plotly.graph_objects as go
-import plotly.express as px
-
-# Define common aesthetic & layout parameters
 fixed_height = 400
 fixed_margin = dict(t=40, b=10, l=20, r=20)
 color_green = "#77DD77"
