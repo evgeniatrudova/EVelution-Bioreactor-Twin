@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 
-# --- CORE BIOPHYSICAL ENGINE (Thesis Formulas) ---
+# --- CORE BIOPHYSICAL ENGINE ---
 class BiogenesisEngine:
     @staticmethod
     def calc_flux(o2, temp, ph, s_o2, s_temp, s_ph, base_rate):
@@ -52,7 +52,6 @@ class FedBatchBioreactorModel:
         history = {"Hour": [], "Therapeutic EVs": [], "Stress-Altered EVs": [], "Apoptotic Impurities": [], "Cell Viability (%)": []}
         
         for hour in range(1, duration_hours + 1):
-            # Calculate flux using Thesis-derived Engine
             rate = BiogenesisEngine.calc_flux(init_o2, target_temp, target_ph, s_o2, s_temp, s_ph, self.base_rate)
             
             # Damage calculation
@@ -78,7 +77,6 @@ st.set_page_config(page_title="EVelution Digital Twin", layout="wide")
 st.title("Bioreactor Optimisation")
 st.caption("Multi-Machinery Model (MMModel) Biophysical Twin | Author: Evgenia Trudova")
 
-# The MMModel Dropdown
 with st.expander("Model Foundation & Biophysical Formulas"):
     col_math1, col_math2 = st.columns(2)
     with col_math1:
@@ -92,58 +90,49 @@ with st.expander("Model Foundation & Biophysical Formulas"):
         st.markdown("**Functional Value Index**")
         st.latex(r"V_{final} = \text{Yield} \times \text{Purity} \times \text{Consistency}")
 
-st.divider()
-# --- EXPLANATION EXPANDER ---
+# --- FIXED EXPANDER ---
 with st.expander("💡 Understanding Dashboard Metrics"):
     tab_bio, tab_mod = st.tabs(["Biological Context", "Mathematical Model"])
-
     with tab_bio:
         st.markdown("""
-        * **Yield Performance:** The total amount of therapeutic EVs expected after downstream processing. This accounts for the cumulative production over the duration, limited by cell viability.
-        * **Harvest Conc:** The instantaneous concentration of EVs at the end of the simulation, representing the bulk harvest density before purification.
-        * **Downstream Purity:** A fixed efficiency constant (78%) representing the loss of EVs during typical tangential flow filtration (TFF) and chromatography steps.
-        * **Cargo Consistency:** The quality index (62%) representing the loading efficiency of therapeutic payload into the EVs produced under current bioreactor conditions.
+        * **Yield Performance:** Total therapeutic EVs accumulated over the run.
+        * **Harvest Conc:** Final instantaneous EV concentration (ev/mL).
+        * **Downstream Purity:** Fixed recovery constant (78%).
+        * **Cargo Consistency:** Quality index (62%).
         """)
-
     with tab_mod:
-        st.markdown("The final yield is calculated by integrating the production flux over the total bioreactor run time, adjusted for physical recovery and loading factors:")
+        st.markdown("The final yield is calculated by integrating the production flux over the total run time:")
         st.latex(r"Yield_{final} = \left( \sum_{t=0}^{t_{dur}} \Phi_{thera}(t) \times Vol \right) \times \eta_{purity} \times \phi_{consistency}")
-        st.markdown(f"Current constants: $\eta_{purity} = 0.78$, $\phi_{consistency} = 0.62$.")
-# --- SIDEBAR: REORGANIZED HIERARCHY ---
+        # Using LaTeX here to avoid the f-string variable interpolation error
+        st.latex(r"\eta_{purity} = 0.78, \quad \phi_{consistency} = 0.62")
+
+st.divider()
+
+# --- SIDEBAR ---
 with st.sidebar:
-    st.header("Cell Line Sensitivity")
-    s_o2 = st.slider("Hypoxia", 0.0, 2.0, 1.2)
-    s_temp = st.slider("Temperature", 0.0, 2.0, 0.8)
-    s_ph = st.slider("pH", 0.0, 2.0, 0.9)
-    
+    st.header("1. Calibration")
+    s_o2 = st.slider("Hypoxia Sensitivity", 0.0, 2.0, 1.2)
+    s_temp = st.slider("Thermal Sensitivity", 0.0, 2.0, 0.8)
+    s_ph = st.slider("pH Sensitivity", 0.0, 2.0, 0.9)
     st.divider()
-    
-    st.header("Experimental")
+    st.header("2. Experimental Parameters")
     vol = st.number_input("Volume (L)", value=50.0)
     o2 = st.slider("Oxygen (%)", 0.0, 21.0, 21.0)
     temp = st.slider("Temp (°C)", 30.0, 45.0, 37.0)
     ph = st.slider("pH", 6.0, 8.0, 7.4)
     mix = st.slider("Mixing (%)", 50.0, 100.0, 85.0)
     dur = st.slider("Duration (h)", 12, 72, 48)
-    
     st.divider()
-    
-    st.header("Desired Yield")
+    st.header("3. Desired Yield")
     target_clinical_yield = st.number_input("Desired Target Yield (EVs)", value=1e15, step=1e14, format="%.1e")
-    
-    st.divider()
-    
-    st.header("Data Management")
-    st.file_uploader("Upload Run Data (CSV)", type=["csv"])
-    if st.button("Export to PDF Report"):
-        st.info("Generating report...")
 
-# --- SIMULATION & CALCULATIONS ---
+# --- SIMULATION ---
 model = FedBatchBioreactorModel()
 df = model.run_simulation(o2, temp, ph, mix, dur, s_o2, s_temp, s_ph)
 
-# Final Metrics
-final_thera = df["Therapeutic EVs"].iloc[-1] * vol * 1000
+# --- CALCULATIONS (Updated for Summation) ---
+total_production = df["Therapeutic EVs"].sum()
+final_thera = total_production * vol * 1000
 true_val = final_thera * 0.78 * 0.62
 completion_pct = (true_val / target_clinical_yield) * 100
 goal_delta = true_val - target_clinical_yield
@@ -155,14 +144,13 @@ col2.metric("Harvest Conc", f"{df['Therapeutic EVs'].iloc[-1]:.2e} ev/mL")
 col3.metric("Downstream Purity", "78.0%")
 col4.metric("Cargo Consistency", "62.0%")
 
-# Progress Bar & Status Banner
 st.markdown(f"**Goal Progress: {completion_pct:.1f}%**")
 st.progress(min(completion_pct / 100, 1.0))
 
 if completion_pct >= 100:
-    st.success(f"Success: Configuration meets clinical yield target of {target_clinical_yield:.1e} EVs.")
+    st.success(f"Success: Yield target met.")
 else:
-    st.warning(f"Configuration shortfall: {abs(goal_delta):.1e} EVs below target. Adjust temperature or duration to optimize yield.")
+    st.warning(f"Configuration shortfall: {abs(goal_delta):.1e} EVs below target.")
 
 st.divider()
 
@@ -172,18 +160,7 @@ with col_left:
     st.markdown("### Process Accumulation")
     fig = px.line(df, x="Hour", y=["Therapeutic EVs", "Stress-Altered EVs", "Apoptotic Impurities"], log_y=True)
     st.plotly_chart(fig, use_container_width=True)
-    
-    with st.expander("Explore Logic"):
-        tab_bio, tab_mod = st.tabs(["Biology", "Model"])
-        tab_bio.markdown("Therapeutic yield decays as metabolic stress increases. Apoptotic debris eventually dominates the harvest profile.")
-        tab_mod.markdown(r"$\Phi_{total} = \Phi_{Therapeutic} + \Phi_{Stress} + \Phi_{Apoptotic}$")
-
 with col_right:
     st.markdown("### Cellular Viability")
     fig2 = px.line(df, x="Hour", y="Cell Viability (%)")
     st.plotly_chart(fig2, use_container_width=True)
-    
-    with st.expander("Explore Membrane Degradation"):
-        tab_bio, tab_mod = st.tabs(["Biology", "Model"])
-        tab_bio.markdown("Cumulative necrosis results from toxic byproduct accumulation and physical impeller stress. The threshold represents the 'Death Cliff'.")
-        tab_mod.markdown(r"$\frac{dV}{dt} = -(\kappa_{tox} + \tau_{shear})$")
