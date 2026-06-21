@@ -16,10 +16,9 @@ import plotly.express as px
 
 # --- CORE BIOPHYSICAL ENGINE (Thesis Formulas) ---
 class BiogenesisEngine:
-    """Implements the Multi-Machinery Model (MMModel) differential equations."""
+    """Implements the Multi-Machinery Model (MMModel) derived from the thesis."""
     @staticmethod
     def calc_flux(o2, temp, ph, s_o2, s_temp, s_ph, base_rate):
-        # Constants
         T0, R_gas = 310.15, 8.314
         Tk = temp + 273.15
         
@@ -40,7 +39,6 @@ class BiogenesisEngine:
         gibbs = np.exp(-dG / (R_gas * T0))
         pH_mod = 1 + (0.5 * (10**(-ph) / 10**(-pH0))**2) / (0.1**2 + (10**(-ph) / 10**(-pH0))**2)
         
-        # Integration
         flux = base_rate * (lambda_hyp**s_o2) * (thermal_flux**s_temp) * ((gibbs * pH_mod)**s_ph)
         return max(0, flux)
 
@@ -51,16 +49,25 @@ class FedBatchBioreactorModel:
 
     def run_simulation(self, init_o2, target_temp, target_ph, mixing_homogeneity, duration_hours, s_o2, s_temp, s_ph):
         viability = 100.0
-        history = {"Hour": [], "Therapeutic EVs": [], "Apoptotic Impurities": [], "Cell Viability (%)": []}
+        history = {"Hour": [], "Therapeutic EVs": [], "Stress-Altered EVs": [], "Apoptotic Impurities": [], "Cell Viability (%)": []}
         
         for hour in range(1, duration_hours + 1):
-            rate = BiogenesisEngine.calc_flux(init_o2, target_temp, target_ph, s_o2, s_temp, s_ph, self.base_rate)
+            # Calculate total flux
+            total_rate = BiogenesisEngine.calc_flux(init_o2, target_temp, target_ph, s_o2, s_temp, s_ph, self.base_rate)
+            
+            # Damage/Shear
             shear = ((mixing_homogeneity - 85.0)**1.5 * 0.1) if mixing_homogeneity > 85 else 0
             viability = max(0, viability - (0.5 + shear))
             
+            # Partitioning fluxes
+            thera = total_rate * (viability / 100)
+            stress = total_rate * ((100 - viability) / 100) * 0.3
+            apop = self.base_rate * ((100 - viability) / 100) * 5
+            
             history["Hour"].append(hour)
-            history["Therapeutic EVs"].append(rate * (viability/100))
-            history["Apoptotic Impurities"].append(self.base_rate * (1 - viability/100) * 10)
+            history["Therapeutic EVs"].append(thera)
+            history["Stress-Altered EVs"].append(stress)
+            history["Apoptotic Impurities"].append(apop)
             history["Cell Viability (%)"].append(viability)
             
         return pd.DataFrame(history)
@@ -71,9 +78,8 @@ st.set_page_config(page_title="EVelution Digital Twin", layout="wide")
 st.title("Bioreactor Optimisation")
 st.caption("Multi-Machinery Model (MMModel) Biophysical Twin | Author: Evgenia Trudova")
 
-# --- MODEL FOUNDATION EXPANDER ---
+# The MMModel Dropdown
 with st.expander("Model Foundation & Biophysical Formulas"):
-    st.markdown("This engine utilizes phenotypic sensitivity coefficients to model EV biogenesis across any cell line.")
     col_math1, col_math2 = st.columns(2)
     with col_math1:
         st.markdown("**Hypoxia (Hill Sigmoid)**")
@@ -108,7 +114,7 @@ with st.sidebar:
     st.divider()
     
     st.header("Desired Yield")
-    target_clinical_yield = st.number_input("Desired Yield (EVs)", value=1e15, format="%.1e")
+    target_clinical_yield = st.number_input("Desired Yield (EVs)", value=1e15, step=1e14, format="%.1e")
     
     st.divider()
     
@@ -117,36 +123,33 @@ with st.sidebar:
     if st.button("Export to PDF Report"):
         st.info("Generating report...")
 
-# --- SIMULATION & CALCULATIONS ---
+# --- SIMULATION ---
 model = FedBatchBioreactorModel()
 df = model.run_simulation(o2, temp, ph, mix, dur, s_o2, s_temp, s_ph)
 
-# Final Metrics
-final_thera = df["Therapeutic EVs"].iloc[-1] * vol * 1000
-purity = 0.78 
-consistency = 0.62 
-true_val = final_thera * purity * consistency
-goal_delta = true_val - target_clinical_yield
-
 # --- DASHBOARD RENDER ---
+final_thera = df["Therapeutic EVs"].iloc[-1] * vol * 1000
+true_val = final_thera * 0.78 * 0.62
+
 col1, col2, col3, col4 = st.columns(4)
-col1.metric("Predicted Functional Value", f"{true_val:.2e}", f"{goal_delta:.1e} vs Goal")
+col1.metric("Predicted Functional Value", f"{true_val:.2e}")
 col2.metric("Harvest Concentration", f"{df['Therapeutic EVs'].iloc[-1]:.2e} ev/mL")
-col3.metric("Downstream Purity", f"{purity*100:.1f}%")
-col4.metric("Cargo Consistency", f"{consistency*100:.1f}%")
+col3.metric("Downstream Purity", "78.0%")
+col4.metric("Cargo Consistency", "62.0%")
 
 st.divider()
 
+# --- GRAPHS ---
 col_left, col_right = st.columns(2)
 with col_left:
     st.markdown("### Process Accumulation")
-    fig = px.line(df, x="Hour", y=["Therapeutic EVs", "Apoptotic Impurities"], log_y=True)
+    fig = px.line(df, x="Hour", y=["Therapeutic EVs", "Stress-Altered EVs", "Apoptotic Impurities"], log_y=True)
     st.plotly_chart(fig, use_container_width=True)
     
     with st.expander("Explore Logic"):
-        tab_bio, tab_mod = st.tabs(["Biology", "Model"])
-        tab_bio.markdown("Dynamics based on cell membrane stability and metabolic stress response.")
-        tab_mod.markdown(r"Calculated using non-linear sensitivity coefficients $\sigma_{o2}, \sigma_{temp}, \sigma_{ph}$.")
+        tab1, tab2 = st.tabs(["Biology", "Model"])
+        tab1.markdown("The graph illustrates the divergence between therapeutic biogenesis and necrotic debris accumulation. Environmental stress forces a shift from high-fidelity secretion to chaotic survival-based vesicle shedding.")
+        tab2.markdown(r"$$ \text{Total Flux} = \Phi_{Therapeutic} + \Phi_{Stress} + \Phi_{Apoptotic} $$")
 
 with col_right:
     st.markdown("### Cellular Viability")
@@ -154,6 +157,6 @@ with col_right:
     st.plotly_chart(fig2, use_container_width=True)
     
     with st.expander("Explore Membrane Degradation"):
-        tab_bio, tab_mod = st.tabs(["Biology", "Model"])
-        tab_bio.markdown("Cumulative environmental load causes necrosis and hydrodynamic tearing.")
-        tab_mod.markdown(r"$$ Viability_{t} = Viability_{t-1} - \tau_{shear} $$")
+        tab1, tab2 = st.tabs(["Biology", "Model"])
+        tab1.markdown("Viability decline tracks cumulative necrotic damage resulting from toxic buildup and physical shear. This slope identifies the batch's 'Death Cliff' threshold.")
+        tab2.markdown(r"$$ \frac{dV}{dt} = -(\kappa_{tox} + \tau_{shear}) $$")
