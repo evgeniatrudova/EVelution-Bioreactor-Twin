@@ -14,7 +14,6 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
-from io import BytesIO
 
 # --- 1. THEME & STYLING ---
 st.set_page_config(page_title="EVelution Bioreactor Twin", layout="wide")
@@ -70,14 +69,19 @@ class FedBatchBioreactorModel:
             history["Cell Viability (%)"].append(viability)
         return pd.DataFrame(history)
 
-# --- 4. APP UI ---
+
+# --- 4. APP UI HEADER ---
 st.title("EVelution Bioreactor Optimisation")
-st.caption("Multi-Machinery Model (MMModel) | Default Cell Line: MSC | Author: Evgenia Trudova")
+st.markdown("""
+<div style="font-size: 0.9em; color: #B39EB5; margin-bottom: 20px;">
+    Powered by the <b>Multi-Machinery Model (MMModel)</b> | Author: Evgenia Trudova 
+    <br><a href="https://stud.epsilon.slu.se/22206/" target="_blank" style="color: #779ECB; text-decoration: none;">📄 Read the foundational SLU Thesis (2026)</a>
+</div>
+""", unsafe_allow_html=True)
 
 # Metric Definition Expander
 with st.expander("Explore Logic", expanded=False):
     tab_bio, tab_math = st.tabs(["Biology", "Model"])
-
     with tab_bio:
         st.markdown("""
         * **Yield Performance**: Total therapeutic EV quantity projected post-DSP. Calculated by integrating hourly production flux ($\Phi$) over the culture duration, scaled by volume.
@@ -85,176 +89,149 @@ with st.expander("Explore Logic", expanded=False):
         * **Downstream Purity**: Represents the success rate of the purification workflow (TFF/Chromatography). Modeled as a recovery coefficient ($\eta_{purity}$).
         * **Cargo Consistency**: Quality index denoting the percentage of EVs that contain the active therapeutic payload ($\phi_{consistency}$).
         """)
-
     with tab_math:
-        st.markdown("")
         st.latex(r" \text{ Yield Performance: } Y_{perf} = \left( \sum_{t=1}^{T} \Phi(t) \cdot V_{react} \right) \cdot \eta_{purity} \cdot \phi_{consistency}")
         st.latex(r" \text{ Harvest Conc: } \Phi_{final} = \Phi(t_{harvest})")
         st.latex(r" \text{ Purity: } \eta_{purity} = \frac{EV_{purified}}{EV_{crude}}")
         st.latex(r" \text{ Consistency: } \phi_{consistency} = \frac{EV_{loaded}}{EV_{total}}")
 
-# --- CELL LINE DATABASE  ---
+
+# --- 5. CELL LINE DATABASE (EMPIRICALLY SOURCED) ---
 cell_line_db = {
     "Human MSCs (Bone Marrow)": {
-        "hypoxia": 1.15, 
-        "thermal": 0.85, 
-        "ph": 0.95,
-        # DEVELOPER/AUDIT NOTE: 
-        # Derived from HIF-1a upregulation kinetics at 2-7% O2 in the native bone marrow niche.
-        # Source: Liu et al., PLoS One, 2015. DOI: 10.1371/journal.pone.0126715
+        "hypoxia": 1.15, "thermal": 0.85, "ph": 0.95,
+        # DEVELOPER NOTE: Derived from HIF-1a upregulation kinetics at 2-7% O2.
         "citation": "HIF-1a upregulation kinetics at 2-7% O2 (Liu et al., 2015)"
     },
     "HEK293T (Suspension)": {
-        "hypoxia": 0.90, 
-        "thermal": 1.20, 
-        "ph": 0.80,
-        # DEVELOPER/AUDIT NOTE: 
-        # Modeled on biphasic thermal shifts (37C down to 33C) extending stationary phase 
-        # viability and increasing specific productivity (qp).
-        # Source: Furdui et al., Biotechnol Prog, 2021. PMC8469586
+        "hypoxia": 0.90, "thermal": 1.20, "ph": 0.80,
+        # DEVELOPER NOTE: Modeled on biphasic thermal shifts (37C down to 33C).
         "citation": "Biphasic thermal shift (37C to 33C) modeling (Furdui et al., 2021)"
     },
     "CHO-K1": {
-        "hypoxia": 0.75, 
-        "thermal": 0.95, 
-        "ph": 1.30,
-        # DEVELOPER/AUDIT NOTE: 
-        # Accounts for severe specific growth rate inhibition due to lactate-induced 
-        # intracellular pH drops during the fed-batch Number Increase (NI) phase.
-        # Source: Pan et al., BMC Biotechnol, 2017. DOI: 10.1186/s12896-017-0368-8
+        "hypoxia": 0.75, "thermal": 0.95, "ph": 1.30,
+        # DEVELOPER NOTE: Accounts for severe specific growth rate inhibition due to lactate-induced pH drops.
         "citation": "Lactate-induced intracellular pH drop inhibition (Pan et al., 2017)"
     },
     "Custom / Empirical DoE": {
-        "hypoxia": 1.00, 
-        "thermal": 1.00, 
-        "ph": 1.00,
-        # DEVELOPER/AUDIT NOTE: 
-        # Baseline multipliers. Requires user to input values derived from internal DoE.
+        "hypoxia": 1.00, "thermal": 1.00, "ph": 1.00,
         "citation": "User-defined parameters derived from internal Design of Experiments (DoE)"
     }
 }
-# Sidebar
+
+# --- 6. SIDEBAR ARCHITECTURE ---
 with st.sidebar:
-    st.header("Cell Line")
-    
-    # 1. Preset Selector
-    selected_cell = st.selectbox(
-        "Select Host Cell Line", 
-        list(cell_line_db.keys()),
-        help="Loads validated empirical kinetic parameters for the selected host."
-    )
-    
-    # Fetch default values based on selection
+    st.header("🧬 Cell Line Parameterization")
+    selected_cell = st.selectbox("Select Host Cell Line", list(cell_line_db.keys()), help="Loads validated empirical kinetic parameters.")
     defaults = cell_line_db[selected_cell]
     
-    # 2. Toggle for Manual Override
-    manual_override = st.toggle("Enable Manual Input")
+    # Traceability display
+    st.markdown(f"""
+    <div style="background-color:#1E1E2E; padding:10px; border-radius:5px; font-size:0.8em; color:#B39EB5; margin-bottom:15px;">
+        <b>📖 Traceability / Source:</b><br>{defaults['citation']}
+    </div>
+    """, unsafe_allow_html=True)
     
-    # 3. Exact Number Inputs (Reactive to the toggle)
-    s_o2 = st.number_input("Hypoxia Modifier", min_value=0.0, max_value=3.0, value=defaults["hypoxia"], step=0.05, disabled=not manual_override)
-    s_temp = st.number_input("Thermal Modifier", min_value=0.0, max_value=3.0, value=defaults["thermal"], step=0.05, disabled=not manual_override)
-    s_ph = st.number_input("pH Modifier", min_value=0.0, max_value=3.0, value=defaults["ph"], step=0.05, disabled=not manual_override)
+    manual_override = st.toggle("Enable Manual Input (DoE Override)")
+    s_o2 = st.number_input("Hypoxia Modifier (Ks scalar)", min_value=0.0, max_value=3.0, value=defaults["hypoxia"], step=0.05, disabled=not manual_override)
+    s_temp = st.number_input("Thermal Modifier (Ea scalar)", min_value=0.0, max_value=3.0, value=defaults["thermal"], step=0.05, disabled=not manual_override)
+    s_ph = st.number_input("pH Modifier (Inhibition scalar)", min_value=0.0, max_value=3.0, value=defaults["ph"], step=0.05, disabled=not manual_override)
     
     st.divider()
-    
     st.header("Experimental")
     vol = st.number_input("Volume (L)", value=50.0)
-    
-    # Kept your sliders separated for cleaner rendering in Streamlit's UI
     o2 = st.slider("Oxygen (%)", 0, 21, 21)
     temp = st.slider("Temp (°C)", 30, 45, 37)
     ph = st.slider("pH", 6.0, 8.0, 7.4)
     mix = st.slider("Mixing (%)", 50, 100, 85)
     dur = st.slider("Duration (h)", 12, 72, 48)
+    
     st.divider()
-
-    st.header("Yield")
+    st.header("Yield Target")
     target = st.number_input("Target Yield", value=1e15, format="%.1e")
     
     st.divider()
-    
     st.header("Data")
     if st.button("Export to PDF"): 
         st.warning("Export functionality requires FPDF integration.")
     st.file_uploader("Upload History File", type="csv")
 
-# --- 4. RUN SIMULATION ---
+
+# --- 7. RUN SIMULATION & CALCS ---
 model = FedBatchBioreactorModel()
 df = model.run_simulation(o2, temp, ph, mix, dur, s_o2, s_temp, s_ph)
 
-# ---  DYNAMIC CALCULATIONS ---
-# Calculate drivers based on the data generated in 'df'
 avg_viability = df["Cell Viability (%)"].mean() / 100.0
-# Prevent division by zero with a tiny epsilon
 impurity_ratio = df["Apoptotic Impurities"].iloc[-1] / (df["Therapeutic EVs"].iloc[-1] + 1e-9)
 
-# Dynamic metrics (these now react to the simulation parameters)
 dynamic_purity = max(0.2, 0.78 * (1.0 / (1.0 + (impurity_ratio * 0.05)))) 
 dynamic_consistency = max(0.3, 0.62 * (avg_viability ** 0.5)) 
 
-# Calculate the final functional value
 total_prod = df["Therapeutic EVs"].sum()
 true_val = total_prod * vol * 1000 * dynamic_purity * dynamic_consistency
 
-# --- 3. METRICS DISPLAY (Now using dynamic variables) ---
+
+# --- 8. METRICS & BATCH EVALUATION ---
 m1, m2, m3, m4 = st.columns(4)
 m1.metric("Yield Performance", f"{true_val:.2e}")
 m2.metric("Harvest Conc", f"{df['Therapeutic EVs'].iloc[-1]:.2e} ev/mL")
-# Displaying the dynamic % values
 m3.metric("Downstream Purity", f"{dynamic_purity*100:.1f}%")
 m4.metric("Cargo Consistency", f"{dynamic_consistency*100:.1f}%")
 
-# --- BATCH EVALUATION BANNER ---
 st.markdown("### Batch Success Evaluation")
 
-# 1. Bioinformatics Logic: Calculate metrics
+# Multi-Tier Validation Logic
 yield_achievement = (true_val / target) * 100
-# Quality score is the combined penalty of impurities and empty EVs
 quality_score = (dynamic_purity * dynamic_consistency) * 100 
 
-# 2. UX Logic: Determine the status color and message
-if yield_achievement >= 100 and quality_score >= 40.0:
-    status_color = "#77DD77" # Green
-    status_icon = "✅"
-    status_text = "OPTIMAL: Target reached with viable quality."
-elif yield_achievement >= 100 and quality_score < 40.0:
-    status_color = "#E39777" # Orange
-    status_icon = "⚠️"
-    status_text = "WARNING: Target reached, but severe quality degradation detected. High risk of DSP failure."
+if yield_achievement >= 100:
+    if quality_score >= 60.0:
+        status_color, quality_color = "#77DD77", "#77DD77"
+        status_icon = "✅"
+        status_text = "OPTIMAL: Target reached with high-purity harvest."
+    elif quality_score >= 40.0: 
+        status_color, quality_color = "#FACA2E", "#FACA2E"
+        status_icon = "⚠️"
+        status_text = "MARGINAL: Target reached, but cargo consistency is dropping. Monitor parameters."
+    else:
+        status_color, quality_color = "#E35252", "#E35252"
+        status_icon = """<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E35252" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 8px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>"""
+        status_text = "CRITICAL: Severe quality degradation. High risk of DSP failure."
 else:
-    status_color = "#779ECB" # Blue
-    status_icon = "🛑"
-    status_text = "DEFICIENT: Target not reached. Increase duration or optimize cell line sensitivity."
+    status_color, quality_color = "#779ECB", "#779ECB"
+    status_icon = "📉"
+    status_text = "DEFICIENT: Target volume not reached. Extend duration or adjust feeding."
 
-# 3. UI Rendering: The Evaluation Card
 st.markdown(f"""
 <div style="background-color: #1E1E2E; padding: 20px; border-radius: 8px; border-left: 6px solid {status_color}; display: flex; align-items: center; justify-content: space-between;">
-    <div>
-        <h4 style="margin: 0; color: {status_color};">{status_icon} {status_text}</h4>
+    <div style="flex: 1;">
+        <h4 style="margin: 0; color: {status_color}; display: flex; align-items: center;">
+            {status_icon} {status_text}
+        </h4>
     </div>
-    <div style="text-align: right;">
+    <div style="text-align: right; min-width: 120px;">
         <div style="font-size: 0.9em; color: #B39EB5;">Yield vs Target</div>
-        <div style="font-size: 1.5em; font-weight: bold; color: {status_color};">{yield_achievement:.1f}%</div>
+        <div style="font-size: 1.5em; font-weight: bold; color: {'#77DD77' if yield_achievement >= 100 else '#779ECB'};">{yield_achievement:.1f}%</div>
     </div>
-    <div style="text-align: right; padding-left: 20px; border-left: 1px solid #333;">
+    <div style="text-align: right; padding-left: 20px; border-left: 1px solid #333; min-width: 140px;">
         <div style="font-size: 0.9em; color: #B39EB5;">Overall Quality Score</div>
-        <div style="font-size: 1.5em; font-weight: bold; color: {'#77DD77' if quality_score >= 40 else '#E39777'};">{quality_score:.1f}%</div>
+        <div style="font-size: 1.5em; font-weight: bold; color: {quality_color};">{quality_score:.1f}%</div>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
-# --- 5. ANALYTICS GRID ---
+
+# --- 9. ANALYTICS GRID ---
 st.divider()
 st.subheader("Analytics")
 r1c1, r1c2 = st.columns(2)
 r2c1, r2c2 = st.columns(2)
 
-# Grid Logic
 with r1c1:
     st.markdown("### Process Accumulation")
     fig = px.line(df, x="Hour", y=["Therapeutic EVs", "Stress-Altered EVs", "Apoptotic Impurities"], log_y=True,
                   color_discrete_map={"Therapeutic EVs": C_GREEN, "Stress-Altered EVs": C_PURPLE, "Apoptotic Impurities": C_BLUE})
-    fig.update_layout(height=fixed_height, margin=fixed_margin)
+    fig.update_layout(height=fixed_height, margin=fixed_margin, hovermode="x unified")
     st.plotly_chart(fig, use_container_width=True)
     with st.expander("Explore Logic"):
         t1, t2 = st.tabs(["Biology", "Model"])
@@ -265,19 +242,13 @@ with r1c2:
     st.markdown("### Cellular Viability")
     crit = df[df["Cell Viability (%)"] < 50.0]
     fig = px.line(df, x="Hour", y=["Cell Viability (%)"], color_discrete_sequence=[C_BLUE])
-    
     if not crit.empty: 
         fig.add_trace(go.Scatter(
-            x=[crit.iloc[0]["Hour"]], 
-            y=[crit.iloc[0]["Cell Viability (%)"]], 
-            mode='markers+text', # Combines marker and label
-            text=['Death Cliff'], 
-            textposition='bottom right', # Orient text below/right of the star
-            textfont=dict(color=C_STAR, size=12, family="sans serif"),
-            marker=dict(size=14, color=C_STAR, symbol='star')
+            x=[crit.iloc[0]["Hour"]], y=[crit.iloc[0]["Cell Viability (%)"]], 
+            mode='markers+text', text=['Death Cliff'], textposition='bottom right',
+            textfont=dict(color=C_STAR, size=12, family="sans serif"), marker=dict(size=14, color=C_STAR, symbol='star')
         ))
-    
-    fig.update_layout(height=fixed_height, margin=fixed_margin, showlegend=False)
+    fig.update_layout(height=fixed_height, margin=fixed_margin, showlegend=False, hovermode="x unified")
     st.plotly_chart(fig, use_container_width=True)
     with st.expander("Explore Logic"):
         t1, t2 = st.tabs(["Biology", "Model"])
@@ -298,39 +269,18 @@ with r2c2:
     st.markdown("### Yield Sensitivity Analysis")
     sens_range = range(12, 96, 6)
     sens_data = [model.run_simulation(o2, temp, ph, mix, d, s_o2, s_temp, s_ph)["Therapeutic EVs"].sum() * vol * 1000 * 0.78 * 0.62 for d in sens_range]
-    
     fig = px.line(x=sens_range, y=sens_data, color_discrete_sequence=[C_GREEN])
     idx = np.argmax(sens_data)
-    
     fig.add_trace(go.Scatter(
-        x=[list(sens_range)[idx]], 
-        y=[sens_data[idx]], 
-        mode='markers+text', # Combines marker and label
-        text=['Optimal Harvest'], 
-        textposition='top right', # Orient text above/right of the star
-        textfont=dict(color=C_STAR, size=12, family="sans serif"),
-        marker=dict(size=14, color=C_STAR, symbol='star')
+        x=[list(sens_range)[idx]], y=[sens_data[idx]], 
+        mode='markers+text', text=['Optimal Harvest'], textposition='top right',
+        textfont=dict(color=C_STAR, size=12, family="sans serif"), marker=dict(size=14, color=C_STAR, symbol='star')
     ))
-    
-    fig.update_layout(height=fixed_height, margin=fixed_margin, showlegend=False)
+    fig.update_layout(height=fixed_height, margin=fixed_margin, showlegend=False, hovermode="x unified")
     st.plotly_chart(fig, use_container_width=True)
     with st.expander("Explore Logic"):
         t1, t2 = st.tabs(["Biology", "Model"])
         t1.markdown("Determines the 'sweet spot' for harvest duration. The inflection point occurs where incremental EV gain is offset by culture necrosis and byproduct toxicity.")
         t2.latex(r"\frac{d}{dt}Yield(t) = 0 \quad at \quad t_{optimal}")
 
-# --- 6. REGULATORY & ACADEMIC FOOTER ---
-st.divider()
-
-st.markdown("""
-<div style="text-align: center; color: #A0A0B0; font-size: 0.85em; padding: 20px;">
-    <b>Traceability & Academic Source Verification:</b><br>
-    <b>[1] Core Engine (MMModel):</b> Trudova, E. (2026). <i>Extracellular vesicles: biogenesis, co-evolution and insights from parasitology.</i> Swedish University of Agricultural Sciences (SLU). <a href="https://stud.epsilon.slu.se/22206/" target="_blank" style="color: #779ECB;">URN: urn:nbn:se:slu:epsilon-s-22206</a><br>
-    [2] <b>Human MSCs:</b> Liu et al. (2015). <i>The Effect of Hypoxia on Mesenchymal Stem Cell Biology.</i> PLoS One. <a href="https://doi.org/10.1371/journal.pone.0126715" style="color: #779ECB;">DOI: 10.1371/journal.pone.0126715</a><br>
-    [3] <b>HEK293T:</b> Furdui et al. (2021). <i>Enhancement of Transgene Expression by Mild Hypothermia.</i> Biotechnol Prog. <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC8469586/" style="color: #779ECB;">PMC8469586</a><br>
-    [4] <b>CHO-K1:</b> Pan et al. (2017). <i>Metabolic characterization of a CHO cell size increase phase.</i> BMC Biotechnol. <a href="https://doi.org/10.1007/s00253-017-8531-y" style="color: #779ECB;">
-https://doi.org/10.1007/s00253-017-8531-y</a><br>
-    <br>
-    <i>EVelution-bio Digital Twin Engine | Engineered for QMS-Compliant Bioprocess Optimization</i>
-</div>
-""", unsafe_allow_html=True)
+# --- 10. REG
