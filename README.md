@@ -5,6 +5,8 @@ EVelution is a series of bioinformatics simulations. Bioreactor Twin is a digita
 # EVelution: Fed-Batch Bioreactor Digital Twin
 **Powered by the Multi-Machinery Model of EV Biogenesis**
 
+https://evelution-bio.streamlit.app/
+
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![Streamlit App](https://img.shields.io/badge/Streamlit-Live_Demo-FF4B4B.svg)](#live-demo)
 [![License: Copyright](https://img.shields.io/badge/License-Copyright_Evgenia_Trudova-red.svg)](#copyright--terms-of-use)
