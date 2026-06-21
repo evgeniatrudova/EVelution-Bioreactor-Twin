@@ -113,7 +113,7 @@ cell_line_db = {
 
 # --- 6. SIDEBAR ARCHITECTURE ---
 with st.sidebar:
-    st.header("🧬 Cell Line Parameterization")
+    st.header("Cell Line")
     selected_cell = st.selectbox("Select Host Cell Line", list(cell_line_db.keys()), help="Loads validated empirical kinetic parameters.")
     defaults = cell_line_db[selected_cell]
     
