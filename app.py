@@ -414,27 +414,6 @@ def toggle_roadmap():
 
 # --- THE FOOTER ---
 st.divider()
-st.markdown("""
-<style>
-    div[data-testid="stVerticalBlock"] > div:has(button.pixel-cube) {
-        position: absolute;
-        bottom: 25px;
-        left: 25px;
-    }
-    button.pixel-cube {
-        width: 20px;
-        height: 20px;
-        background-color: #FFB90F !important;
-        border: 1px solid #CC8400 !important;
-        padding: 0 !important;
-        border-radius: 2px !important;
-        cursor: pointer !important;
-    }
-    button.pixel-cube:hover {
-        background-color: #FFA500 !important;
-    }
-</style>
-""", unsafe_allow_html=True)
 
 # Footer Content
 st.markdown("""
