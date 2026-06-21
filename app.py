@@ -170,7 +170,13 @@ with row2_col1:
     
     with st.expander("Explore Logic"):
         tab_bio, tab_mod = st.tabs(["Biology", "Model"])
-        tab_bio.markdown("Visualizes the loss cascade from crude bioreactor harvest to the final functional therapeutic product.")
+        
+        tab_bio.markdown("""
+        Visualizes the loss cascade from crude bioreactor harvest to the final functional therapeutic product. 
+        
+        **How to read this graph:** Focus on the horizontal width of each segment, which quantitatively represents the total EV yield at that specific process stage. The narrowing vertical intervals between segments explicitly illustrate the cumulative loss (or 'drop-off') attributable to downstream purification and cargo loading efficiencies.
+        """)
+        
         tab_mod.latex(r"V_{final} = Yield_{raw} \cdot \eta_{purity} \cdot \phi_{consistency}")
 
 # 4. Yield Sensitivity Analysis (Row 2, Right)
