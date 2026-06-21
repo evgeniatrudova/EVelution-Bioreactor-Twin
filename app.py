@@ -418,44 +418,84 @@ with r2c2:
         t1.markdown("Determines the 'sweet spot' for harvest duration. The inflection point occurs where incremental EV gain is offset by culture necrosis and byproduct toxicity.")
         t2.latex(r"\frac{d}{dt}Yield(t) = 0 \quad at \quad t_{optimal}")
 
-
-# --- POPUP ---    
-if 'show_roadmap' not in st.session_state:
-    st.session_state.show_roadmap = False
-
-def toggle_roadmap():
-    st.session_state.show_roadmap = not st.session_state.show_roadmap
-
 # --- THE FOOTER ---
 st.divider()
 
 # Footer Content
+
 st.markdown("""
+
 <div style="text-align: left; color: #A0A0B0; font-size: 0.85em; padding: 20px; background-color: #1E1E2E; border-radius: 8px; position: relative;">
+
     <h4 style="color: #779ECB; margin-top: 0; padding-left: 30px;">Traceability & Academic Source Verification:</h4>
+
     <div style="padding-left: 30px;">
+
         <b>[1] Core Engine (MMModel):</b> Trudova, E. (2026). <i>Extracellular vesicles: biogenesis, co-evolution and insights from parasitology.</i> Swedish University of Agricultural Sciences (SLU). <a href="https://stud.epsilon.slu.se/22206/" target="_blank" style="color: #779ECB;">URN: urn:nbn:se:slu:epsilon-s-22206</a><br>
+
         <b>[2] Human MSCs:</b> Liu et al. (2015). <i>The Effect of Hypoxia on Mesenchymal Stem Cell Biology.</i> PLoS One. <a href="https://doi.org/10.1371/journal.pone.0126715" target="_blank" style="color: #779ECB;">DOI: 10.1371/journal.pone.0126715</a><br>
+
         <b>[3] HEK293T:</b> Furdui et al. (2021). <i>Enhancement of Transgene Expression by Mild Hypothermia.</i> Biotechnol Prog. <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC8469586/" target="_blank" style="color: #779ECB;">PMC8469586</a><br>
+
         <b>[4] CHO-K1:</b> Pan et al. (2017). <i>Metabolic characterization of a CHO cell size increase phase.</i> BMC Biotechnol. <a href="https://doi.org/10.1007/s00253-017-8531-y" target="_blank" style="color: #779ECB;">https://doi.org/10.1007/z00253-017-8531-y</a><br>
+
     </div>
+
 </div>
+
 """, unsafe_allow_html=True)
 
-# The Clickable Cube 
-if st.button(" ", key="cube_trigger", help="EVelution Roadmap", on_click=toggle_roadmap):
-    pass
-st.markdown("""<script>
-    var buttons = document.querySelectorAll('button');
-    buttons.forEach(function(btn) {
-        if (btn.innerText === "") { btn.className = 'pixel-cube'; }
-    });
-</script>""", unsafe_allow_html=True)
 
-if st.session_state.show_roadmap:
-    with st.popover("Development Roadmap", expanded=True):
-        st.subheader("EVelution Roadmap")
-        st.progress(0.15)
-        st.markdown("""
+# CSS for the far-right cube and hover effects
+st.markdown("""
+<style>
+/* Footer container layout */
+.footer-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    background-color: #1E1E2E;
+    border-radius: 8px;
+    position: relative;
+}
 
-        """)
+/* Style the popover button as the Eevee cube */
+[data-testid="stPopover"] > button {
+    background-color: #B07030 !important;      /* Slightly darker base */
+    border: 2px solid #6A4020 !important;      /* Darker edging */
+    width: 24px !important;
+    height: 24px !important;
+    padding: 0 !important;
+    border-radius: 4px !important;
+    transition: all 0.3s ease;                 /* Smooth transition */
+}
+
+/* The 'found' state (Hover) */
+[data-testid="stPopover"] > button:hover {
+    background-color: #D78A4D !important;      /* Turns to Eevee Orange */
+    border-color: #A66A3B !important;          /* Adjusts edging */
+    cursor: pointer;
+}
+
+/* Hide default arrow/text */
+[data-testid="stPopover"] > button > div { display: none; }
+</style>
+""", unsafe_allow_html=True)
+
+# Layout container
+with st.container():
+    st.markdown('<div class="footer-container">', unsafe_allow_html=True)
+    
+    # Left Side: Info Text
+    st.markdown("""
+    <div style="color: #A0A0B0; font-size: 0.85em;">
+        <i>EVelution-bio Digital Twin Engine | Engineered for QMS-Compliant Bioprocess Optimization</i>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Right Side: The Cube (Popover)
+    with st.popover(" "):
+        st.write("Easter Egg Found! The Roadmap is loading...")
+    
+    st.markdown('</div>', unsafe_allow_html=True)
