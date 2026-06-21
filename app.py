@@ -14,7 +14,8 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
-from fpdf import FPDF  
+from fpdf import FPDF
+import io
 
 # --- 1. THEME & STYLING ---
 st.set_page_config(page_title="EVelution Bioreactor Twin", layout="wide")
@@ -28,11 +29,11 @@ st.markdown("""
     
     /* UX FIX: Force disabled buttons to remain highly visible */
     .stButton > button[disabled] {
-        opacity: 0.85 !important;           /* Boosts visibility significantly */
-        border: 1px solid #4B4B60 !important; /* Keeps the outline crisp */
-        color: #B39EB5 !important;          /* Uses your theme's muted purple/grey for text */
+        opacity: 0.85 !important;           
+        border: 1px solid #4B4B60 !important; 
+        color: #B39EB5 !important;          
         background-color: transparent !important;
-        cursor: not-allowed !important;     /* Shows the 'stop' cursor so they know it's off */
+        cursor: not-allowed !important;     
     }
 </style>
 """, unsafe_allow_html=True)
@@ -42,7 +43,7 @@ fixed_height = 400
 fixed_margin = dict(t=40, b=10, l=20, r=20)
 C_GREEN, C_BLUE, C_PURPLE, C_STAR = "#77DD77", "#779ECB", "#B39EB5", "#E39777"
 
-# --- 3. BIOPHYSICAL ENGINE & PDF GENERATOR ---
+# --- 3. BIOPHYSICAL ENGINE ---
 class BiogenesisEngine:
     @staticmethod
     def calc_flux(o2, temp, ph, s_o2, s_temp, s_ph, base_rate):
@@ -79,12 +80,30 @@ class FedBatchBioreactorModel:
             history["Cell Viability (%)"].append(viability)
         return pd.DataFrame(history)
 
-# <-- FIXED PDF FUNCTION -->
-def generate_qms_pdf(cell_line, vol, dur, target, yield_val, purity, consistency, q_score):
-    """Generates a formal, regulatory-style PDF report."""
+# --- 4. ADVANCED PDF GENERATOR ---
+def insert_pdf_graph(pdf, title, fig, description):
+    """Helper function to cleanly render Plotly graphs into the PDF."""
+    pdf.set_font("Helvetica", "B", 12)
+    pdf.set_text_color(0, 0, 0)
+    pdf.cell(0, 10, title, ln=True)
+    pdf.set_font("Helvetica", "I", 9)
+    pdf.set_text_color(100, 100, 100)
+    pdf.multi_cell(0, 5, description)
+    pdf.ln(2)
+    
+    # Capture the plotly figure as a high-res image byte stream using Kaleido
+    img_bytes = fig.to_image(format="png", engine="kaleido", scale=2, width=800, height=400)
+    img_buffer = io.BytesIO(img_bytes)
+    
+    # Insert into PDF (w=190 fills the A4 page width nicely)
+    pdf.image(img_buffer, w=190)
+    pdf.ln(5)
+
+def generate_qms_pdf(cell_line, vol, dur, target, yield_val, purity, consistency, q_score, figs):
     pdf = FPDF()
     pdf.add_page()
     
+    # --- PAGE 1: EXECUTIVE SUMMARY ---
     pdf.set_font("Helvetica", "B", 16)
     pdf.set_text_color(119, 158, 203) 
     pdf.cell(0, 10, "EVelution-bio: Digital Twin Projection Report", ln=True)
@@ -128,11 +147,26 @@ def generate_qms_pdf(cell_line, vol, dur, target, yield_val, purity, consistency
     pdf.set_font("Helvetica", "B", 11)
     pdf.cell(0, 10, f"STATUS: {status}", ln=True)
     
-    # THE FIX: Return directly as bytes from fpdf2
+    # --- PAGE 2: PROCESS ANALYTICS ---
+    pdf.add_page()
+    pdf.set_font("Helvetica", "B", 14)
+    pdf.set_text_color(119, 158, 203)
+    pdf.cell(0, 10, "Process Diagnostics & Analytics", ln=True)
+    pdf.line(10, 20, 200, 20)
+    pdf.ln(5)
+    
+    insert_pdf_graph(pdf, "A. Process Accumulation", figs['accum'], "Tracks therapeutic accumulation versus impurity buildup over time. Includes benchmark overlay if active.")
+    insert_pdf_graph(pdf, "B. Cellular Viability", figs['viab'], "Tracks culture health. Viability decline signifies the transition from growth to apoptotic phase.")
+    
+    # --- PAGE 3: YIELD ANALYTICS ---
+    pdf.add_page()
+    insert_pdf_graph(pdf, "C. Yield-to-Value Bridge", figs['funnel'], "Visualizes the mass balance and cumulative yield loss across downstream purification stages.")
+    insert_pdf_graph(pdf, "D. Yield Sensitivity Analysis", figs['sens'], "Determines the optimal harvest window by balancing EV gain against toxicity buildup.")
+    
     return bytes(pdf.output())
 
 
-# --- 4. APP UI HEADER ---
+# --- 5. APP UI HEADER ---
 st.title("EVelution Bioreactor Optimisation")
 st.markdown("""
 <div style="font-size: 0.9em; color: #B39EB5; margin-bottom: 20px;">
@@ -156,7 +190,7 @@ with st.expander("Explore Logic", expanded=False):
         st.latex(r" \text{ Consistency: } \phi_{consistency} = \frac{EV_{loaded}}{EV_{total}}")
 
 
-# --- 5. CELL LINE DATABASE ---
+# --- 6. CELL LINE DATABASE ---
 cell_line_db = {
     "Human MSCs (Bone Marrow)": {"hypoxia": 1.15, "thermal": 0.85, "ph": 0.95},
     "HEK293T (Suspension)": {"hypoxia": 0.90, "thermal": 1.20, "ph": 0.80},
@@ -164,7 +198,7 @@ cell_line_db = {
     "Custom / Empirical DoE": {"hypoxia": 1.00, "thermal": 1.00, "ph": 1.00}
 }
 
-# --- 6. SIDEBAR INPUTS ---
+# --- 7. SIDEBAR INPUTS ---
 with st.sidebar:
     st.header("Cell Line")
     selected_cell = st.selectbox("Select Host Cell Line", list(cell_line_db.keys()), help="Loads validated empirical kinetic parameters.")
@@ -198,7 +232,7 @@ with st.sidebar:
     st.markdown(f"<div style='text-align: right; color: #77DD77; font-size: 0.9em;'><b>Active Target: {target:.1e} EVs</b></div>", unsafe_allow_html=True)
 
 
-# --- 7. RUN SIMULATION & CALCS (Must happen before PDF export!) ---
+# --- 8. RUN SIMULATION & GENERATE GRAPHS ---
 model = FedBatchBioreactorModel()
 df = model.run_simulation(o2, temp, ph, mix, dur, s_o2, s_temp, s_ph)
 
@@ -210,11 +244,54 @@ dynamic_consistency = max(0.3, 0.62 * (avg_viability ** 0.5))
 
 total_prod = df["Therapeutic EVs"].sum()
 true_val = total_prod * vol * 1000 * dynamic_purity * dynamic_consistency
-
 yield_achievement = (true_val / target) * 100
 quality_score = (dynamic_purity * dynamic_consistency) * 100 
 
-# --- 8. SIDEBAR DATA EXPORT ---
+# Build Figure 1: Accumulation
+fig_accum = px.line(df, x="Hour", y=["Therapeutic EVs", "Stress-Altered EVs", "Apoptotic Impurities"], log_y=True,
+              color_discrete_map={"Therapeutic EVs": C_GREEN, "Stress-Altered EVs": C_PURPLE, "Apoptotic Impurities": C_BLUE})
+if 'historical_df' in st.session_state and st.session_state['historical_df'] is not None:
+    hist_df = st.session_state['historical_df']
+    if "Hour" in hist_df.columns and "Therapeutic EVs" in hist_df.columns:
+        fig_accum.add_trace(go.Scatter(
+            x=hist_df["Hour"], y=hist_df["Therapeutic EVs"],
+            mode='lines', name='Golden Batch Benchmark',
+            line=dict(color='rgba(227, 82, 82, 0.7)', width=3, dash='dash')
+        ))
+fig_accum.update_layout(height=fixed_height, margin=fixed_margin, hovermode="x unified")
+
+# Build Figure 2: Viability
+crit = df[df["Cell Viability (%)"] < 50.0]
+fig_viab = px.line(df, x="Hour", y=["Cell Viability (%)"], color_discrete_sequence=[C_BLUE])
+if not crit.empty: 
+    fig_viab.add_trace(go.Scatter(
+        x=[crit.iloc[0]["Hour"]], y=[crit.iloc[0]["Cell Viability (%)"]], 
+        mode='markers+text', text=['Death Cliff'], textposition='bottom right',
+        textfont=dict(color=C_STAR, size=12, family="sans serif"), marker=dict(size=14, color=C_STAR, symbol='star')
+    ))
+fig_viab.update_layout(height=fixed_height, margin=fixed_margin, showlegend=False, hovermode="x unified")
+
+# Build Figure 3: Funnel
+fig_funnel = go.Figure(go.Funnel(y=["Raw Yield", "Intact (Purity)", "Functional"], x=[true_val/(0.78*0.62), true_val/0.62, true_val], textinfo="value+percent previous", marker={"color": [C_BLUE, C_PURPLE, C_GREEN]}))
+fig_funnel.update_layout(height=fixed_height, margin=fixed_margin)
+
+# Build Figure 4: Sensitivity
+sens_range = range(12, 96, 6)
+sens_data = [model.run_simulation(o2, temp, ph, mix, d, s_o2, s_temp, s_ph)["Therapeutic EVs"].sum() * vol * 1000 * 0.78 * 0.62 for d in sens_range]
+fig_sens = px.line(x=sens_range, y=sens_data, color_discrete_sequence=[C_GREEN])
+idx = np.argmax(sens_data)
+fig_sens.add_trace(go.Scatter(
+    x=[list(sens_range)[idx]], y=[sens_data[idx]], 
+    mode='markers+text', text=['Optimal Harvest'], textposition='top right',
+    textfont=dict(color=C_STAR, size=12, family="sans serif"), marker=dict(size=14, color=C_STAR, symbol='star')
+))
+fig_sens.update_layout(height=fixed_height, margin=fixed_margin, showlegend=False, hovermode="x unified")
+
+# Dictionary to pass all graphs easily
+report_figs = {'accum': fig_accum, 'viab': fig_viab, 'funnel': fig_funnel, 'sens': fig_sens}
+
+
+# --- 9. SIDEBAR DATA EXPORT ---
 with st.sidebar:
     st.divider()
     st.header("Data & Benchmarking")
@@ -222,14 +299,15 @@ with st.sidebar:
     st.markdown("**Export Current Simulation**")
     pdf_bytes = generate_qms_pdf(
         cell_line=selected_cell, vol=vol, dur=dur, target=target,
-        yield_val=true_val, purity=dynamic_purity, consistency=dynamic_consistency, q_score=quality_score
+        yield_val=true_val, purity=dynamic_purity, consistency=dynamic_consistency, q_score=quality_score,
+        figs=report_figs
     )
-    # Styled as default (secondary) button
     st.download_button(
         label="Download PDF",
         data=pdf_bytes,
         file_name="EVelution_Batch_Projection.pdf",
-        mime="application/pdf"
+        mime="application/pdf",
+        use_container_width=True
     )
     
     st.markdown("<br>", unsafe_allow_html=True)
@@ -237,7 +315,6 @@ with st.sidebar:
     st.markdown("**Historical Benchmarking**")
     st.info("Drop a CSV of your best historical run here. The engine will project it as a dashed 'ghost line' on your main graph so you can optimize against it in real-time.")
     
-    # 1. The File Uploader
     uploaded_file = st.file_uploader(
         "Upload History File (.csv)", 
         type="csv",
@@ -245,35 +322,20 @@ with st.sidebar:
         key="csv_uploader"
     )
     
-    # 2. Process the upload
     if uploaded_file is not None:
         try:
             historical_df = pd.read_csv(uploaded_file)
             st.session_state['historical_df'] = historical_df
-            st.success(f"☑️ Benchmark active! Loaded {len(historical_df)} data points.")
         except Exception as e:
             st.error(f"Could not read the file. Error: {e}")
-    
-    # ==========================================
-    # 3. DELETE BUTTON
-    # ==========================================
-    # Check if data exists to toggle the disabled state
+
     has_data = st.session_state.get('historical_df') is not None
-    
-    # FIX: Adding use_container_width=True forces the button's edges to perfectly 
-    # snap to the grid alignment of the file uploader above it.
     if st.button("Delete", disabled=not has_data, use_container_width=True):
-        # Wipe the data from memory
         st.session_state['historical_df'] = None
-        # Wipe the file from the uploader widget
         if 'csv_uploader' in st.session_state:
             del st.session_state['csv_uploader']
-        # Instantly reboot the app to clear the UI
         st.rerun()
 
-# ==========================================
-    # 4. THE LEGAL DISCLAIMER
-    # ==========================================
     st.markdown("""
     <div style="font-size: 0.75em; color: #808080; margin-top: 20px; padding-top: 15px; border-top: 1px solid #333; line-height: 1.4; text-align: justify;">
         <b>DATA GOVERNANCE AND LIABILITY DISCLAIMER</b><br>
@@ -281,8 +343,8 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
 
-    
-# --- 9. METRICS & BATCH EVALUATION ---
+
+# --- 10. METRICS & BATCH EVALUATION ---
 m1, m2, m3, m4 = st.columns(4)
 m1.metric("Yield Performance", f"{true_val:.2e}")
 m2.metric("Harvest Conc", f"{df['Therapeutic EVs'].iloc[-1]:.2e} ev/mL")
@@ -338,7 +400,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 
-# --- 10. ANALYTICS GRID ---
+# --- 11. ANALYTICS GRID ---
 st.divider()
 st.subheader("Analytics")
 r1c1, r1c2 = st.columns(2)
@@ -346,38 +408,16 @@ r2c1, r2c2 = st.columns(2)
 
 with r1c1:
     st.markdown("### Process Accumulation")
-    fig = px.line(df, x="Hour", y=["Therapeutic EVs", "Stress-Altered EVs", "Apoptotic Impurities"], log_y=True,
-                  color_discrete_map={"Therapeutic EVs": C_GREEN, "Stress-Altered EVs": C_PURPLE, "Apoptotic Impurities": C_BLUE})
-    
-    # Updated Overlay with Stark Red Ghost Line
-    if 'historical_df' in st.session_state and st.session_state['historical_df'] is not None:
-        hist_df = st.session_state['historical_df']
-        if "Hour" in hist_df.columns and "Therapeutic EVs" in hist_df.columns:
-            fig.add_trace(go.Scatter(
-                x=hist_df["Hour"], y=hist_df["Therapeutic EVs"],
-                mode='lines', name='Golden Batch Benchmark',
-                line=dict(color='rgba(227, 82, 82, 0.7)', width=3, dash='dash') # Changed to semi-transparent RED
-            ))
-            
-    fig.update_layout(height=fixed_height, margin=fixed_margin, hovermode="x unified")
-    st.plotly_chart(fig, use_container_width=True)
+    # Using the pre-built figure from Section 8
+    st.plotly_chart(fig_accum, use_container_width=True)
     with st.expander("Explore Logic"):
         t1, t2 = st.tabs(["Biology", "Model"])
         t1.markdown("This graph tracks therapeutic accumulation versus impurity buildup. The harvest window is constrained by the impurity crossover point. Harvesting before this ensures optimal purity levels.")
         t2.latex(r"\Phi_{total} = \Phi_{Therapeutic} + \Phi_{Stress} + \Phi_{Apoptotic}")
-    
+
 with r1c2:
     st.markdown("### Cellular Viability")
-    crit = df[df["Cell Viability (%)"] < 50.0]
-    fig = px.line(df, x="Hour", y=["Cell Viability (%)"], color_discrete_sequence=[C_BLUE])
-    if not crit.empty: 
-        fig.add_trace(go.Scatter(
-            x=[crit.iloc[0]["Hour"]], y=[crit.iloc[0]["Cell Viability (%)"]], 
-            mode='markers+text', text=['Death Cliff'], textposition='bottom right',
-            textfont=dict(color=C_STAR, size=12, family="sans serif"), marker=dict(size=14, color=C_STAR, symbol='star')
-        ))
-    fig.update_layout(height=fixed_height, margin=fixed_margin, showlegend=False, hovermode="x unified")
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig_viab, use_container_width=True)
     with st.expander("Explore Logic"):
         t1, t2 = st.tabs(["Biology", "Model"])
         t1.markdown("Viability decline signifies the transition from growth to apoptotic phase. The 'Death Cliff' marker identifies when cell repair mechanisms collapse under toxic stress.")
@@ -385,9 +425,7 @@ with r1c2:
 
 with r2c1:
     st.markdown("### Yield-to-Value Bridge")
-    fig = go.Figure(go.Funnel(y=["Raw Yield", "Intact (Purity)", "Functional"], x=[true_val/(0.78*0.62), true_val/0.62, true_val], textinfo="value+percent previous", marker={"color": [C_BLUE, C_PURPLE, C_GREEN]}))
-    fig.update_layout(height=fixed_height, margin=fixed_margin)
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig_funnel, use_container_width=True)
     with st.expander("Explore Logic"):
         t1, t2 = st.tabs(["Biology", "Model"])
         t1.markdown("This funnel visualizes the mass balance across downstream stages. Narrowing segments highlight cumulative yield loss during purification. It serves as a diagnostic for loading/recovery efficiency.")
@@ -395,23 +433,14 @@ with r2c1:
 
 with r2c2:
     st.markdown("### Yield Sensitivity Analysis")
-    sens_range = range(12, 96, 6)
-    sens_data = [model.run_simulation(o2, temp, ph, mix, d, s_o2, s_temp, s_ph)["Therapeutic EVs"].sum() * vol * 1000 * 0.78 * 0.62 for d in sens_range]
-    fig = px.line(x=sens_range, y=sens_data, color_discrete_sequence=[C_GREEN])
-    idx = np.argmax(sens_data)
-    fig.add_trace(go.Scatter(
-        x=[list(sens_range)[idx]], y=[sens_data[idx]], 
-        mode='markers+text', text=['Optimal Harvest'], textposition='top right',
-        textfont=dict(color=C_STAR, size=12, family="sans serif"), marker=dict(size=14, color=C_STAR, symbol='star')
-    ))
-    fig.update_layout(height=fixed_height, margin=fixed_margin, showlegend=False, hovermode="x unified")
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig_sens, use_container_width=True)
     with st.expander("Explore Logic"):
         t1, t2 = st.tabs(["Biology", "Model"])
         t1.markdown("Determines the 'sweet spot' for harvest duration. The inflection point occurs where incremental EV gain is offset by culture necrosis and byproduct toxicity.")
         t2.latex(r"\frac{d}{dt}Yield(t) = 0 \quad at \quad t_{optimal}")
 
-# --- 11. REGULATORY & ACADEMIC FOOTER ---
+
+# --- 12. REGULATORY & ACADEMIC FOOTER ---
 st.divider()
 st.markdown("""
 <div style="text-align: left; color: #A0A0B0; font-size: 0.85em; padding: 20px; background-color: #1E1E2E; border-radius: 8px;">
