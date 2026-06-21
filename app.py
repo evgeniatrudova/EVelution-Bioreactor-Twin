@@ -205,8 +205,7 @@ true_val = total_prod * vol * 1000 * dynamic_purity * dynamic_consistency
 yield_achievement = (true_val / target) * 100
 quality_score = (dynamic_purity * dynamic_consistency) * 100 
 
-
-# --- 8. SIDEBAR DATA  ---
+# --- 8. SIDEBAR DATA EXPORT ---
 with st.sidebar:
     st.divider()
     st.header("Data & Benchmarking")
@@ -216,6 +215,7 @@ with st.sidebar:
         cell_line=selected_cell, vol=vol, dur=dur, target=target,
         yield_val=true_val, purity=dynamic_purity, consistency=dynamic_consistency, q_score=quality_score
     )
+    # Styled as default (secondary) button
     st.download_button(
         label="Download PDF",
         data=pdf_bytes,
@@ -224,11 +224,11 @@ with st.sidebar:
     )
     
     st.markdown("<br>", unsafe_allow_html=True)
-
+    
     st.markdown("**Historical Benchmarking**")
     st.info("Drop a CSV of your best historical run here. The engine will project it as a dashed 'ghost line' on your main graph so you can optimize against it in real-time.")
     
-    # 1. The File Uploader (Requires the 'key' to allow programmatic deletion)
+    # 1. The File Uploader
     uploaded_file = st.file_uploader(
         "Upload History File (.csv)", 
         type="csv",
@@ -236,31 +236,33 @@ with st.sidebar:
         key="csv_uploader"
     )
     
-   # Process the upload
+    # 2. Process the upload
     if uploaded_file is not None:
         try:
             historical_df = pd.read_csv(uploaded_file)
             st.session_state['historical_df'] = historical_df
+            st.success(f"☑️ Benchmark active! Loaded {len(historical_df)} data points.")
         except Exception as e:
             st.error(f"Could not read the file. Error: {e}")
 
     # ==========================================
-    # THE KILL SWITCH (Directly above the legal text)
+    # 3. THE UX-DESIGNED DELETE BUTTON
     # ==========================================
-    if st.session_state.get('historical_df') is not None:
-        st.success(f"☑️ Benchmark active! Loaded {len(st.session_state['historical_df'])} data points.")
-        
-        # The prominent red purge button
-        if st.button("🗑️ Delete Uploaded CSV Data", type="primary", use_container_width=True):
-            # Wipe the data from memory
-            st.session_state['historical_df'] = None
-            # Wipe the file from the uploader widget
+    # Check if data exists to toggle the disabled state
+    has_data = st.session_state.get('historical_df') is not None
+    
+    # Render standard button (matches 'Download PDF' style) and disable if empty
+    if st.button("Delete", disabled=not has_data):
+        # Wipe the data from memory
+        st.session_state['historical_df'] = None
+        # Wipe the file from the uploader widget
+        if 'csv_uploader' in st.session_state:
             del st.session_state['csv_uploader']
-            # Instantly reboot the app to clear the screen
-            st.rerun()
+        # Instantly reboot the app to clear the UI
+        st.rerun()
 
     # ==========================================
-    # THE LEGAL DISCLAIMER
+    # 4. THE LEGAL DISCLAIMER
     # ==========================================
     st.markdown("""
     <div style="font-size: 0.75em; color: #808080; margin-top: 20px; padding-top: 15px; border-top: 1px solid #333; line-height: 1.4; text-align: justify;">
@@ -268,6 +270,7 @@ with st.sidebar:
         Data uploaded to EVelution-bio is processed exclusively in volatile memory (RAM) for ephemeral visualization. The architecture possesses no persistent storage capabilities and conducts no external transmission. End-users retain strict, sole liability for the protection of proprietary intellectual property and trade secrets, in accordance with the EU Trade Secrets Directive (2016/943) and the US Defend Trade Secrets Act (DTSA). Users are required to execute the data purge protocol upon session completion. This localized, non-retention operational model places the application outside the scope of permanent data hosting liabilities. Utilization of this software constitutes formal acknowledgment of end-user responsibility under applicable Quality Management Systems (QMS) and electronic record frameworks (e.g., FDA 21 CFR Part 11).
     </div>
     """, unsafe_allow_html=True)
+
     
 # --- 9. METRICS & BATCH EVALUATION ---
 m1, m2, m3, m4 = st.columns(4)
