@@ -421,46 +421,20 @@ with r2c2:
 # --- THE FOOTER ---
 st.divider()
 
-# Footer Content
-
-st.markdown("""
-
-<div style="text-align: left; color: #A0A0B0; font-size: 0.85em; padding: 20px; background-color: #1E1E2E; border-radius: 8px; position: relative;">
-
-    <h4 style="color: #779ECB; margin-top: 0; padding-left: 30px;">Traceability & Academic Source Verification:</h4>
-
-    <div style="padding-left: 30px;">
-
-        <b>[1] Core Engine (MMModel):</b> Trudova, E. (2026). <i>Extracellular vesicles: biogenesis, co-evolution and insights from parasitology.</i> Swedish University of Agricultural Sciences (SLU). <a href="https://stud.epsilon.slu.se/22206/" target="_blank" style="color: #779ECB;">URN: urn:nbn:se:slu:epsilon-s-22206</a><br>
-
-        <b>[2] Human MSCs:</b> Liu et al. (2015). <i>The Effect of Hypoxia on Mesenchymal Stem Cell Biology.</i> PLoS One. <a href="https://doi.org/10.1371/journal.pone.0126715" target="_blank" style="color: #779ECB;">DOI: 10.1371/journal.pone.0126715</a><br>
-
-        <b>[3] HEK293T:</b> Furdui et al. (2021). <i>Enhancement of Transgene Expression by Mild Hypothermia.</i> Biotechnol Prog. <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC8469586/" target="_blank" style="color: #779ECB;">PMC8469586</a><br>
-
-        <b>[4] CHO-K1:</b> Pan et al. (2017). <i>Metabolic characterization of a CHO cell size increase phase.</i> BMC Biotechnol. <a href="https://doi.org/10.1007/s00253-017-8531-y" target="_blank" style="color: #779ECB;">https://doi.org/10.1007/z00253-017-8531-y</a><br>
-
-    </div>
-
-</div>
-
-""", unsafe_allow_html=True)
-
-
-# CSS for the far-right cube and hover effects
+# 1. Define the CSS for the "Found Cube" (Right-aligned, Eevee colors)
 st.markdown("""
 <style>
-/* Footer container layout */
-.footer-container {
+/* Footer container to hold text and cube */
+.footer-wrapper {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 10px 20px;
     background-color: #1E1E2E;
+    padding: 20px;
     border-radius: 8px;
-    position: relative;
 }
 
-/* Style the popover button as the Eevee cube */
+/* Style the popover button to be the pixel cube */
 [data-testid="stPopover"] > button {
     background-color: #B07030 !important;      /* Slightly darker base */
     border: 2px solid #6A4020 !important;      /* Darker edging */
@@ -468,34 +442,40 @@ st.markdown("""
     height: 24px !important;
     padding: 0 !important;
     border-radius: 4px !important;
-    transition: all 0.3s ease;                 /* Smooth transition */
+    transition: all 0.3s ease;
 }
 
-/* The 'found' state (Hover) */
+/* Turns Eevee orange when hovered/found */
 [data-testid="stPopover"] > button:hover {
-    background-color: #D78A4D !important;      /* Turns to Eevee Orange */
-    border-color: #A66A3B !important;          /* Adjusts edging */
-    cursor: pointer;
+    background-color: #D78A4D !important;      /* Eevee Orange */
+    border-color: #A66A3B !important;
 }
 
-/* Hide default arrow/text */
+/* Hide default caret/text */
 [data-testid="stPopover"] > button > div { display: none; }
 </style>
 """, unsafe_allow_html=True)
 
-# Layout container
+# 2. Render the layout
+# We use a container to force the Flexbox layout
 with st.container():
-    st.markdown('<div class="footer-container">', unsafe_allow_html=True)
+    # Split footer into text and cube
+    col_text, col_cube = st.columns([0.95, 0.05])
     
-    # Left Side: Info Text
-    st.markdown("""
-    <div style="color: #A0A0B0; font-size: 0.85em;">
-        <i>EVelution-bio Digital Twin Engine | Engineered for QMS-Compliant Bioprocess Optimization</i>
-    </div>
-    """, unsafe_allow_html=True)
+    with col_text:
+        st.markdown("""
+        <div style="color: #A0A0B0; font-size: 0.85em; padding-left: 10px;">
+            <b>Traceability & Academic Source Verification:</b><br>
+            [1] Core Engine (MMModel): Trudova, E. (2026). <i>EV Biogenesis...</i> | 
+            [2] MSCs: Liu et al. (2015) | [3] HEK293T: Furdui et al. (2021) | [4] CHO-K1: Pan et al. (2017)
+            <br><i>EVelution-bio Digital Twin Engine | Engineered for QMS-Compliant Bioprocess Optimization</i>
+        </div>
+        """, unsafe_allow_html=True)
     
-    # Right Side: The Cube (Popover)
-    with st.popover(" "):
-        st.write("Easter Egg Found! The Roadmap is loading...")
+    with col_cube:
+        # The popover acts as the button. No 'if' logic needed.
+        with st.popover(" "):
+            # You can add content here later
+            st.write("")
     
     st.markdown('</div>', unsafe_allow_html=True)
