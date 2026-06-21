@@ -271,13 +271,13 @@ with st.sidebar:
         # Instantly reboot the app to clear the UI
         st.rerun()
 
-    # ==========================================
+# ==========================================
     # 4. THE LEGAL DISCLAIMER
     # ==========================================
     st.markdown("""
     <div style="font-size: 0.75em; color: #808080; margin-top: 20px; padding-top: 15px; border-top: 1px solid #333; line-height: 1.4; text-align: justify;">
         <b>DATA GOVERNANCE AND LIABILITY DISCLAIMER</b><br>
-        Data uploaded to EVelution-bio is processed exclusively in volatile memory (RAM) for ephemeral visualization. The architecture possesses no persistent storage capabilities and conducts no external transmission. End-users retain strict, sole liability for the protection of proprietary intellectual property and trade secrets, in accordance with the EU Trade Secrets Directive (2016/943) and the US Defend Trade Secrets Act (DTSA). Users are required to execute the data purge protocol upon session completion. This localized, non-retention operational model places the application outside the scope of permanent data hosting liabilities. Utilization of this software constitutes formal acknowledgment of end-user responsibility under applicable Quality Management Systems (QMS) and electronic record frameworks (e.g., FDA 21 CFR Part 11).
+        Data uploaded to this application is processed strictly in volatile memory (RAM) for ephemeral visualization. The architecture contains no persistent storage, logging, or external transmission protocols. By utilizing this software, end-users assume absolute liability for the safeguarding of proprietary technical trade secrets, in compliance with the Swedish Trade Secrets Act (SFS 2018:558, as amended 2026), the EU Trade Secrets Directive (2016/943), and the US Defend Trade Secrets Act (DTSA). Furthermore, operations align with global electronic record frameworks (FDA 21 CFR Part 11, EMA Annex 11) and international data sovereignty laws (GDPR) via zero-retention processing. Under international safe harbor and ephemeral data processing doctrines, this application acts purely as a localized execution environment, legally exempting the provider from data hosting, processor, and controller liabilities. Users are legally obligated to execute the internal data purge protocol upon session termination.
     </div>
     """, unsafe_allow_html=True)
 
