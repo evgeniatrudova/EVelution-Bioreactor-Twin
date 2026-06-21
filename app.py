@@ -108,17 +108,31 @@ with st.sidebar:
     if st.button("Export to PDF"): st.warning("Export functionality requires FPDF integration.")
     st.file_uploader("Upload History File", type="csv")
 
-# Simulation
+# --- 4. RUN SIMULATION ---
 model = FedBatchBioreactorModel()
 df = model.run_simulation(o2, temp, ph, mix, dur, s_o2, s_temp, s_ph)
-true_val = df["Therapeutic EVs"].sum() * vol * 1000 * 0.78 * 0.62
 
-# Metrics
+# ---  DYNAMIC CALCULATIONS ---
+# Calculate drivers based on the data generated in 'df'
+avg_viability = df["Cell Viability (%)"].mean() / 100.0
+# Prevent division by zero with a tiny epsilon
+impurity_ratio = df["Apoptotic Impurities"].iloc[-1] / (df["Therapeutic EVs"].iloc[-1] + 1e-9)
+
+# Dynamic metrics (these now react to the simulation parameters)
+dynamic_purity = max(0.2, 0.78 * (1.0 / (1.0 + (impurity_ratio * 0.05)))) 
+dynamic_consistency = max(0.3, 0.62 * (avg_viability ** 0.5)) 
+
+# Calculate the final functional value
+total_prod = df["Therapeutic EVs"].sum()
+true_val = total_prod * vol * 1000 * dynamic_purity * dynamic_consistency
+
+# --- 3. METRICS DISPLAY (Now using dynamic variables) ---
 m1, m2, m3, m4 = st.columns(4)
 m1.metric("Yield Performance", f"{true_val:.2e}")
 m2.metric("Harvest Conc", f"{df['Therapeutic EVs'].iloc[-1]:.2e} ev/mL")
-m3.metric("Downstream Purity", "78.0%")
-m4.metric("Cargo Consistency", "62.0%")
+# Displaying the dynamic % values
+m3.metric("Downstream Purity", f"{dynamic_purity*100:.1f}%")
+m4.metric("Cargo Consistency", f"{dynamic_consistency*100:.1f}%")
 
 # --- 5. ANALYTICS GRID ---
 st.divider()
