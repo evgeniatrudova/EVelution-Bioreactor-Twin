@@ -118,65 +118,63 @@ m4.metric("Cargo Consistency", "62.0%")
 st.progress(min(completion / 100, 1.0))
 st.write(f"**Goal Progress: {completion:.1f}%**")
 
-# --- GRAPHS & DROPDOWNS ---
-cols = st.columns(2)
-
-# Graph 1: Accumulation
-with cols[0]:
-    fig1 = px.line(df, x="Hour", y=["Therapeutic EVs", "Stress-Altered EVs", "Apoptotic Impurities"], log_y=True)
-    st.plotly_chart(fig1, use_container_width=True)
-    with st.expander("Analysis: Process Accumulation"):
-        b, m = st.tabs(["Biology", "Model"])
-        b.write("This graph tracks the divergence between therapeutic product and byproduct accumulation over time. It identifies the optimal harvest point before impurity dominance.")
-        m.latex(r"\Phi_{total} = \Phi_{Therapeutic} + \Phi_{Stress} + \Phi_{Apoptotic}")
-
-# Graph 2: Viability
-with cols[1]:
-    fig2 = px.line(df, x="Hour", y="Cell Viability (%)")
-    st.plotly_chart(fig2, use_container_width=True)
-    with st.expander("Analysis: Cellular Viability"):
-        b, m = st.tabs(["Biology", "Model"])
-        b.write("Viability declines as a function of cumulative metabolic stress and mechanical impeller sheer. The slope represents the rate of culture necrosis.")
-        m.latex(r"\frac{dV}{dt} = -(\kappa_{tox} + \tau_{shear})")
-
-# --- YIELD BRIDGE & SENSITIVITY ---
+# --- DASHBOARD VISUALIZATION GRID ---
 st.divider()
-col_bridge, col_sens = st.columns(2)
+st.subheader("Process Analytics")
 
-with col_bridge:
-    st.markdown("### The Yield-to-Value Bridge")
-    
-    # Calculate funnel stages based on your current true_val
-    # Note: true_val is already (Yield * 0.78 * 0.62)
+# Create two rows of two columns each
+row1_col1, row1_col2 = st.columns(2)
+row2_col1, row2_col2 = st.columns(2)
+
+# 1. Process Accumulation (Row 1, Left)
+with row1_col1:
+    st.markdown("### Process Accumulation")
+    fig_acc = px.line(df, x="Hour", y=["Therapeutic EVs", "Stress-Altered EVs", "Apoptotic Impurities"], log_y=True)
+    st.plotly_chart(fig_acc, use_container_width=True)
+    with st.expander("Explore Logic"):
+        tab_bio, tab_mod = st.tabs(["Biology", "Model"])
+        tab_bio.markdown("Tracks therapeutic product and byproduct accumulation over time to identify the optimal harvest point before impurity dominance.")
+        tab_mod.latex(r"\Phi_{total} = \Phi_{Therapeutic} + \Phi_{Stress} + \Phi_{Apoptotic}")
+
+# 2. Cellular Viability (Row 1, Right)
+with row1_col2:
+    st.markdown("### Cellular Viability")
+    fig_via = px.line(df, x="Hour", y="Cell Viability (%)")
+    st.plotly_chart(fig_via, use_container_width=True)
+    with st.expander("Explore Logic"):
+        tab_bio, tab_mod = st.tabs(["Biology", "Model"])
+        tab_bio.markdown("Viability declines due to cumulative metabolic stress and mechanical impeller shear, identifying the culture 'Death Cliff'.")
+        tab_mod.latex(r"\frac{dV}{dt} = -(\kappa_{tox} + \tau_{shear})")
+
+# 3. Yield-to-Value Bridge (Row 2, Left)
+with row2_col1:
+    st.markdown("### Yield-to-Value Bridge")
     raw_yield = true_val / (0.78 * 0.62)
     purity_yield = true_val / 0.62
-    
     fig_funnel = go.Figure(go.Funnel(
         y=["Raw Target Yield", "Intact EVs (Purity)", "Functional Value"],
         x=[raw_yield, purity_yield, true_val],
         textinfo="value+percent previous",
         marker={"color": ["#636EFA", "#EF553B", "#00CC96"]}
     ))
-    
     fig_funnel.update_layout(height=400, margin=dict(t=20, b=0, l=0, r=0))
     st.plotly_chart(fig_funnel, use_container_width=True)
-    
-    with st.expander("Analysis: Yield-to-Value Bridge"):
+    with st.expander("Explore Logic"):
         tab_bio, tab_mod = st.tabs(["Biology", "Model"])
-        tab_bio.markdown("The bridge visualizes the loss cascade from crude bioreactor harvest to the final functional therapeutic product. It illustrates the 'bottlenecks' created by purification and loading efficiencies.")
+        tab_bio.markdown("Visualizes the loss cascade from crude bioreactor harvest to the final functional therapeutic product.")
         tab_mod.latex(r"V_{final} = Yield_{raw} \cdot \eta_{purity} \cdot \phi_{consistency}")
 
-with col_sens:
-    st.markdown("### Yield Sensitivity Analysis")
+# 4. Yield Sensitivity Analysis (Row 2, Right)
+with row2_col2:
+    st.markdown("### Yield Sensitivity")
     dur_range = range(12, 96, 6)
-    sensitivity_data = [
+    sens_data = [
         model.run_simulation(o2, temp, ph, mix, d, s_o2, s_temp, s_ph)["Therapeutic EVs"].sum() * vol * 1000 * 0.78 * 0.62 
         for d in dur_range
     ]
-    fig_sens = px.line(x=list(dur_range), y=sensitivity_data, labels={'x': 'Duration (h)', 'y': 'Total Predicted Yield'})
+    fig_sens = px.line(x=list(dur_range), y=sens_data, labels={'x': 'Duration (h)', 'y': 'Total Yield'})
     st.plotly_chart(fig_sens, use_container_width=True)
-    
-    with st.expander("Analysis: Yield Sensitivity"):
+    with st.expander("Explore Logic"):
         tab_bio, tab_mod = st.tabs(["Biology", "Model"])
-        tab_bio.markdown("This sensitivity analysis maps the 'sweet spot' of the batch duration. Yield plateaus or drops when the duration exceeds the cell lifespan.")
+        tab_bio.markdown("Maps the batch duration 'sweet spot' where yield is maximized before cell necrosis dominates.")
         tab_mod.latex(r"Yield_{target} = \int_{0}^{t} \Phi(t) dt")
