@@ -66,10 +66,10 @@ class FedBatchBioreactorModel:
 
 # --- 3. UI LAYOUT ---
 st.title("Bioreactor Optimisation")
-st.caption("Multi-Machinery Model (MMModel) Digital Twin | Cell Line: MSC | Author: Evgenia Trudova")
+st.caption("Multi-Machinery Model | Default Cell Line: MSC | Author: Evgenia Trudova")
 
 # Main Foundation Dropdown
-with st.expander("🔬 MMModel Foundation & Metric Definitions"):
+with st.expander("Metric"):
     st.markdown("### Core Metrics")
     col1, col2 = st.columns(2)
     with col1:
@@ -93,7 +93,7 @@ with st.sidebar:
     target = st.number_input("Target Yield", value=1e15, format="%.1e")
     st.divider()
     st.header("Data Management")
-    if st.button("📥 Export to PDF"): st.info("Export functionality requires FPDF integration.")
+    if st.button("Export to PDF"): st.info("Export functionality requires FPDF integration.")
     uploaded_file = st.file_uploader("Upload History File", type="csv")
 
 # Simulation
