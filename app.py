@@ -208,7 +208,7 @@ quality_score = (dynamic_purity * dynamic_consistency) * 100
 # --- 8. SIDEBAR DATA EXPORT (Now it has the math it needs!) ---
 with st.sidebar:
     st.divider()
-    st.header("Data & Benchmarking")
+    st.header("📁 Data & Benchmarking")
     
     st.markdown("**Export Current Simulation**")
     pdf_bytes = generate_qms_pdf(
@@ -216,7 +216,7 @@ with st.sidebar:
         yield_val=true_val, purity=dynamic_purity, consistency=dynamic_consistency, q_score=quality_score
     )
     st.download_button(
-        label="Download PDF",
+        label="📄 Download QMS Report (PDF)",
         data=pdf_bytes,
         file_name="EVelution_Batch_Projection.pdf",
         mime="application/pdf"
@@ -225,7 +225,7 @@ with st.sidebar:
     st.markdown("<br>", unsafe_allow_html=True)
     
     st.markdown("**Historical Benchmarking**")
-    st.info(" Drop a CSV of your best historical run here. The engine will project it as a dashed 'ghost line' on your main graph so you can optimize against it in real-time.")
+    st.info("💡 **Golden Batch Overlay:** Drop a CSV of your best historical run here. The engine will project it as a dashed 'ghost line' on your main graph so you can optimize against it in real-time.")
     
     uploaded_file = st.file_uploader(
         "Upload History File (.csv)", 
@@ -236,7 +236,7 @@ with st.sidebar:
     if uploaded_file is not None:
         try:
             historical_df = pd.read_csv(uploaded_file)
-            st.success(f"✅ Benchmark active! Loaded {len(historical_df)} data points.")
+            st.success(f"☑️ Benchmark active! Loaded {len(historical_df)} data points.")
             st.session_state['historical_df'] = historical_df
         except Exception as e:
             st.error(f"Could not read the file. Error: {e}")
@@ -276,7 +276,7 @@ elif yield_achievement >= 100:
         status_text = "CRITICAL: Severe quality degradation. High risk of DSP failure."
 else:
     status_color, quality_color = "#779ECB", "#779ECB"
-    status_icon = "📉"
+    status_icon = "🛑"
     status_text = "DEFICIENT: Target volume not reached. Extend duration or adjust feeding."
 
 st.markdown(f"""
@@ -309,7 +309,6 @@ with r1c1:
     fig = px.line(df, x="Hour", y=["Therapeutic EVs", "Stress-Altered EVs", "Apoptotic Impurities"], log_y=True,
                   color_discrete_map={"Therapeutic EVs": C_GREEN, "Stress-Altered EVs": C_PURPLE, "Apoptotic Impurities": C_BLUE})
     
-    # --- THIS IS THE LINE TO FIX ---
     if 'historical_df' in st.session_state and st.session_state['historical_df'] is not None:
         hist_df = st.session_state['historical_df']
         if "Hour" in hist_df.columns and "Therapeutic EVs" in hist_df.columns:
@@ -321,3 +320,64 @@ with r1c1:
             
     fig.update_layout(height=fixed_height, margin=fixed_margin, hovermode="x unified")
     st.plotly_chart(fig, use_container_width=True)
+    
+with r1c2:
+    st.markdown("### Cellular Viability")
+    crit = df[df["Cell Viability (%)"] < 50.0]
+    fig = px.line(df, x="Hour", y=["Cell Viability (%)"], color_discrete_sequence=[C_BLUE])
+    if not crit.empty: 
+        fig.add_trace(go.Scatter(
+            x=[crit.iloc[0]["Hour"]], y=[crit.iloc[0]["Cell Viability (%)"]], 
+            mode='markers+text', text=['Death Cliff'], textposition='bottom right',
+            textfont=dict(color=C_STAR, size=12, family="sans serif"), marker=dict(size=14, color=C_STAR, symbol='star')
+        ))
+    fig.update_layout(height=fixed_height, margin=fixed_margin, showlegend=False, hovermode="x unified")
+    st.plotly_chart(fig, use_container_width=True)
+    with st.expander("Explore Logic"):
+        t1, t2 = st.tabs(["Biology", "Model"])
+        t1.markdown("Viability decline signifies the transition from growth to apoptotic phase. The 'Death Cliff' marker identifies when cell repair mechanisms collapse under toxic stress.")
+        t2.latex(r"\frac{dV}{dt} = -(\kappa_{tox} + \tau_{shear})")
+
+with r2c1:
+    st.markdown("### Yield-to-Value Bridge")
+    fig = go.Figure(go.Funnel(y=["Raw Yield", "Intact (Purity)", "Functional"], x=[true_val/(0.78*0.62), true_val/0.62, true_val], textinfo="value+percent previous", marker={"color": [C_BLUE, C_PURPLE, C_GREEN]}))
+    fig.update_layout(height=fixed_height, margin=fixed_margin)
+    st.plotly_chart(fig, use_container_width=True)
+    with st.expander("Explore Logic"):
+        t1, t2 = st.tabs(["Biology", "Model"])
+        t1.markdown("This funnel visualizes the mass balance across downstream stages. Narrowing segments highlight cumulative yield loss during purification. It serves as a diagnostic for loading/recovery efficiency.")
+        t2.latex(r"V_{final} = Yield_{raw} \cdot \eta_{purity} \cdot \phi_{consistency}")
+
+with r2c2:
+    st.markdown("### Yield Sensitivity Analysis")
+    sens_range = range(12, 96, 6)
+    sens_data = [model.run_simulation(o2, temp, ph, mix, d, s_o2, s_temp, s_ph)["Therapeutic EVs"].sum() * vol * 1000 * 0.78 * 0.62 for d in sens_range]
+    fig = px.line(x=sens_range, y=sens_data, color_discrete_sequence=[C_GREEN])
+    idx = np.argmax(sens_data)
+    fig.add_trace(go.Scatter(
+        x=[list(sens_range)[idx]], y=[sens_data[idx]], 
+        mode='markers+text', text=['Optimal Harvest'], textposition='top right',
+        textfont=dict(color=C_STAR, size=12, family="sans serif"), marker=dict(size=14, color=C_STAR, symbol='star')
+    ))
+    fig.update_layout(height=fixed_height, margin=fixed_margin, showlegend=False, hovermode="x unified")
+    st.plotly_chart(fig, use_container_width=True)
+    with st.expander("Explore Logic"):
+        t1, t2 = st.tabs(["Biology", "Model"])
+        t1.markdown("Determines the 'sweet spot' for harvest duration. The inflection point occurs where incremental EV gain is offset by culture necrosis and byproduct toxicity.")
+        t2.latex(r"\frac{d}{dt}Yield(t) = 0 \quad at \quad t_{optimal}")
+
+# --- 11. REGULATORY & ACADEMIC FOOTER ---
+st.divider()
+st.markdown("""
+<div style="text-align: left; color: #A0A0B0; font-size: 0.85em; padding: 20px; background-color: #1E1E2E; border-radius: 8px;">
+    <h4 style="color: #779ECB; margin-top: 0;">Traceability & Academic Source Verification:</h4>
+    <b>[1] Core Engine (MMModel):</b> Trudova, E. (2026). <i>Extracellular vesicles: biogenesis, co-evolution and insights from parasitology.</i> Swedish University of Agricultural Sciences (SLU). <a href="https://stud.epsilon.slu.se/22206/" target="_blank" style="color: #779ECB;">URN: urn:nbn:se:slu:epsilon-s-22206</a><br>
+    <b>[2] Human MSCs:</b> Liu et al. (2015). <i>The Effect of Hypoxia on Mesenchymal Stem Cell Biology.</i> PLoS One. <a href="https://doi.org/10.1371/journal.pone.0126715" target="_blank" style="color: #779ECB;">DOI: 10.1371/journal.pone.0126715</a><br>
+    <b>[3] HEK293T:</b> Furdui et al. (2021). <i>Enhancement of Transgene Expression by Mild Hypothermia.</i> Biotechnol Prog. <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC8469586/" target="_blank" style="color: #779ECB;">PMC8469586</a><br>
+    <b>[4] CHO-K1:</b> Pan et al. (2017). <i>Metabolic characterization of a CHO cell size increase phase.</i> BMC Biotechnol. <a href="https://doi.org/10.1007/s00253-017-8531-y" target="_blank" style="color: #779ECB;">https://doi.org/10.1007/s00253-017-8531-y</a><br>
+    <br>
+    <div style="text-align: center; margin-top: 15px;">
+        <i>EVelution-bio Digital Twin Engine | Engineered for QMS-Compliant Bioprocess Optimization</i>
+    </div>
+</div>
+""", unsafe_allow_html=True)
