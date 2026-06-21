@@ -16,30 +16,33 @@ import plotly.graph_objects as go
 import plotly.express as px
 from io import BytesIO
 
-# --- 1. THEME & CONFIGURATION ---
-st.set_page_config(page_title="EVelution Bioreactor Twin", layout="wide")
-
-# CSS Injection for Theme
 st.markdown("""
 <style>
+    /* Force Blue Accent on all inputs */
     :root {
-        --primary-color: #779ECB;
-        --background-color: #0E1117;
-        --secondary-background-color: #1E1E2E;
-        --text-color: #E0E0E0;
+        --primary-color: #779ECB !important;
     }
-    .stSlider [data-baseweb="slider"] > div > div > div > div { background-color: #779ECB !important; }
-    #MainMenu {visibility: hidden;} footer {visibility: hidden;}
+    
+    /* Target Slider Handle */
+    .st-emotion-cache-12w0qpk { background-color: #779ECB !important; } /* Handle */
+    
+    /* Target Slider Track (Active) */
+    div[data-baseweb="slider"] [data-testid="stSliderTickBar"] { background-color: #779ECB !important; }
+    
+    /* Override for the slider track color */
+    .stSlider [data-baseweb="slider"] div[role="slider"] {
+        background-color: #779ECB !important;
+        border: 2px solid #779ECB !important;
+    }
+    
+    /* General Accent Override */
+    div.st-bm, div.st-bk { color: #779ECB !important; }
+    
+    #MainMenu {visibility: hidden;} 
+    footer {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
 
-# --- 2. GLOBAL CONSTANTS (Defined BEFORE use) ---
-fixed_height = 400
-fixed_margin = dict(t=40, b=10, l=20, r=20)
-C_GREEN = "#77DD77"
-C_BLUE = "#779ECB"
-C_PURPLE = "#B39EB5"
-C_STAR = "#E39777"
 # --- 2. CORE ENGINE ---
 class BiogenesisEngine:
     @staticmethod
