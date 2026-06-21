@@ -28,9 +28,6 @@
 #    - Purity        = (Therapeutic_EVs + Stress_EVs) / Total_Yield
 #    - TRUE_VALUE    = Total_Yield * Consistency * Purity
 # ==============================================================================
-# ==============================================================================
-# FED-BATCH BIOREACTOR OPTIMISATION FOR EV YIELD PRODUCTION
-# ==============================================================================
 
 import streamlit as st
 import numpy as np
