@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 
-# --- CORE BIOPHYSICAL ENGINE (Thesis Formulas) ---
+# --- CORE BIOPHYSICAL ENGINE ---
 class BiogenesisEngine:
     """Implements the Multi-Machinery Model (MMModel) derived from the thesis."""
     @staticmethod
@@ -42,7 +42,7 @@ class BiogenesisEngine:
         flux = base_rate * (lambda_hyp**s_o2) * (thermal_flux**s_temp) * ((gibbs * pH_mod)**s_ph)
         return max(0, flux)
 
-# --- BIOREACTOR SIMULATION MODEL ---
+# --- BIOREACTOR SIMULATION ---
 class FedBatchBioreactorModel:
     def __init__(self):
         self.base_rate = 1.2e9
@@ -94,7 +94,7 @@ with st.expander("Model Foundation & Biophysical Formulas"):
 
 st.divider()
 
-# --- SIDEBAR: REORGANIZED HIERARCHY ---
+# --- SIDEBAR ---
 with st.sidebar:
     st.header("Calibration")
     s_o2 = st.slider("Hypoxia Sensitivity", 0.0, 2.0, 1.2)
@@ -128,16 +128,28 @@ model = FedBatchBioreactorModel()
 df = model.run_simulation(o2, temp, ph, mix, dur, s_o2, s_temp, s_ph)
 
 # --- DASHBOARD RENDER ---
-final_thera = df["Therapeutic EVs"].iloc[-1] * vol * 1000
-true_val = final_thera * 0.78 * 0.62
+completion_pct = (true_val / target_clinical_yield) * 100
+goal_delta = true_val - target_clinical_yield
 
+# Metric Row
 col1, col2, col3, col4 = st.columns(4)
-col1.metric("Predicted Functional Value", f"{true_val:.2e}")
-col2.metric("Harvest Concentration", f"{df['Therapeutic EVs'].iloc[-1]:.2e} ev/mL")
-col3.metric("Downstream Purity", "78.0%")
-col4.metric("Cargo Consistency", "62.0%")
+col1.metric(
+    "Yield Performance", 
+    f"{true_val:.2e}", 
+    f"{goal_delta:+.1e} vs Goal"
+)
+col2.metric("Harvest Conc", f"{df['Therapeutic EVs'].iloc[-1]:.2e} ev/mL")
+col3.metric("Downstream Purity", f"{purity*100:.1f}%")
+col4.metric("Cargo Consistency", f"{consistency*100:.1f}%")
 
-st.divider()
+# Progress Bar & Status Banner (The "UX fix")
+st.markdown(f"**Goal Progress: {completion_pct:.1f}%**")
+st.progress(min(completion_pct / 100, 1.0))
+
+if completion_pct >= 100:
+    st.success(f"Success: Configuration meets clinical yield target of {target_clinical_yield:.1e} EVs.")
+else:
+    st.warning(f"Configuration shortfall: {abs(goal_delta):.1e} EVs below target. Adjust temperature or duration to optimize yield.")
 
 # --- GRAPHS ---
 col_left, col_right = st.columns(2)
