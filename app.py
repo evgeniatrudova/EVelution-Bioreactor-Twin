@@ -28,15 +28,11 @@
 #    - Purity        = (Therapeutic_EVs + Stress_EVs) / Total_Yield
 #    - TRUE_VALUE    = Total_Yield * Consistency * Purity
 # ==============================================================================
-# ==============================================================================
-# FED-BATCH BIOREACTOR OPTIMISATION FOR EV YIELD PRODUCTION
-# ==============================================================================
 
 import streamlit as st
 import numpy as np
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
 
 # --- CORE BIOLOGICAL MODEL ---
 class CellLineKinetics:
@@ -88,6 +84,11 @@ class FedBatchBioreactorModel:
         yields = {"therapeutic": 0.0, "stress": 0.0, "apoptotic": 0.0}
         history = {"Hour": [], "Therapeutic EVs": [], "Stress-Altered EVs": [], "Apoptotic Impurities": [], "Cell Viability (%)": []}
         
+        # ENGINEER FIX: Calculate Hydrodynamic Shear Stress penalty if over-mixed (> 85%)
+        shear_damage = 0.0
+        if mixing_homogeneity > 85.0:
+            shear_damage = ((mixing_homogeneity - 85.0) ** 1.5) * 0.1
+        
         for hour in range(1, duration_hours + 1):
             current_o2 = max(0.5, current_o2 - 0.1) 
             dead_o2 = max(0.0, current_o2 * 0.1) 
@@ -96,13 +97,16 @@ class FedBatchBioreactorModel:
             if viability["main"] > 0:
                 yields["therapeutic"] += self._calc_gradient_baseline(current_o2, target_temp, target_ph) * main_weight * (viability["main"]/100)
                 yields["stress"] += self._calc_acute_stress(current_o2, target_temp, target_ph) * main_weight * (viability["main"]/100)
-                dmg = self._calc_hourly_damage(current_o2, target_temp, target_ph)
+                
+                # Apply environmental damage + shear damage
+                dmg = self._calc_hourly_damage(current_o2, target_temp, target_ph) + (shear_damage / self.cell.robustness)
                 viability["main"] = max(0.0, viability["main"] - dmg)
                 yields["apoptotic"] += (dmg * self.cell.base_ev_rate * self.cell.kinetics['apoptotic_mult']) * main_weight
                 
             if viability["dead"] > 0:
                 yields["therapeutic"] += self._calc_gradient_baseline(dead_o2, target_temp, dead_ph) * dead_weight * (viability["dead"]/100)
                 yields["stress"] += self._calc_acute_stress(dead_o2, target_temp, dead_ph) * dead_weight * (viability["dead"]/100)
+                
                 dmg = self._calc_hourly_damage(dead_o2, target_temp, dead_ph)
                 viability["dead"] = max(0.0, viability["dead"] - dmg)
                 yields["apoptotic"] += (dmg * self.cell.base_ev_rate * self.cell.kinetics['apoptotic_mult']) * dead_weight
@@ -142,7 +146,7 @@ reactor_vol = st.sidebar.number_input("Reactor Volume (L)", min_value=0.1, max_v
 init_o2 = st.sidebar.slider("Oxygen (%)", 0.0, 21.0, 15.0, 0.5)
 target_temp = st.sidebar.slider("Temperature (°C)", 30.0, 45.0, 38.0, 0.5)
 target_ph = st.sidebar.slider("pH", 6.0, 8.0, 7.0, 0.1)
-mixing_homo = st.sidebar.slider("Mixing Homogeneity (%)", 50.0, 100.0, 85.0, 1.0)
+mixing_homo = st.sidebar.slider("Mixing Homogeneity (%)", 50.0, 100.0, 85.0, 1.0, help="Careful: >85% introduces hydrodynamic shear stress!")
 duration = st.sidebar.slider("Batch Duration (Hours)", 12, 72, 48, 2)
 
 # Run Simulation
@@ -166,13 +170,15 @@ downstream_purity = (total_evs_ml / total_particles_ml * 100) if total_particles
 
 true_functional_value_total = target_yield_predicted * (cargo_consistency / 100) * (downstream_purity / 100)
 
-# Goal Seeking Metric
+# UX FIX: Goal Seeking Delta
+goal_delta = true_functional_value_total - target_clinical_yield
 goal_achieved_pct = (true_functional_value_total / target_clinical_yield) * 100
 
 # --- DASHBOARD RENDER ---
 # TOP METRICS (Responsive row)
 col1, col2, col3, col4 = st.columns(4)
-col1.metric("Predicted Functional Value", f"{true_functional_value_total:.2e}", f"{goal_achieved_pct:.1f}% of Target Goal")
+# UX FIX: Added delta to show exact deficit or surplus
+col1.metric("Predicted Functional Value", f"{true_functional_value_total:.2e}", f"{goal_delta:.1e} vs Goal", delta_color="normal")
 col2.metric("Harvest Concentration", f"{total_particles_ml:.2e} ev/mL", f"In {reactor_vol}L Tank")
 col3.metric("Downstream Purity", f"{downstream_purity:.1f}%")
 col4.metric("Cargo Consistency", f"{cargo_consistency:.1f}%")
@@ -186,6 +192,8 @@ funnel_data = dict(
     count=[target_yield_predicted, functional_yield_total, true_functional_value_total]
 )
 fig_funnel = px.funnel(funnel_data, x='count', y='stage', color_discrete_sequence=['#4C78A8'])
+# UX FIX: Force text info to show inside the funnel bars for better scannability
+fig_funnel.update_traces(textinfo="value+percent initial")
 fig_funnel.update_layout(margin=dict(l=20, r=20, t=20, b=20), height=300)
 st.plotly_chart(fig_funnel, use_container_width=True)
 
@@ -201,18 +209,15 @@ col_left, col_right = st.columns(2)
 with col_left:
     st.markdown("### Accumulation of Particles")
     
-    # Restructure dataframe for Plotly
     df_melted = df.melt(id_vars=['Hour'], value_vars=['Therapeutic EVs', 'Stress-Altered EVs', 'Apoptotic Impurities'], 
                         var_name='Particle Type', value_name='Count (per mL)')
     
-    # Colorblind safe palette
     fig_acc = px.line(df_melted, x='Hour', y='Count (per mL)', color='Particle Type',
                       color_discrete_map={"Therapeutic EVs": "#4C78A8", "Stress-Altered EVs": "#F58518", "Apoptotic Impurities": "#E45756"})
     
+    # UX FIX: Combined log scale and formatting into a single, clean command
     fig_acc.update_layout(legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1), margin=dict(l=0, r=0, t=0, b=0))
-    # Enforce scientific notation on Y axis for readability
     fig_acc.update_yaxes(type="log", tickformat=".1e")
-    fig_acc.update_yaxes(tickformat=".1e")
     
     st.plotly_chart(fig_acc, use_container_width=True)
     
@@ -228,5 +233,5 @@ with col_right:
     st.plotly_chart(fig_viab, use_container_width=True)
     
     with st.expander("Formula & Explanation"):
-        st.markdown(r"$$ Viability_{t} = Viability_{t-1} - \left( \frac{\mu_{o2} + \mu_{temp} + \mu_{pH}}{\rho_{cell}} \right) $$")
-        st.markdown("Models active cell death based on cumulative environmental toxicity and unmixed hydrodynamic dead zones.")
+        st.markdown(r"$$ Viability_{t} = Viability_{t-1} - \left( \frac{\mu_{o2} + \mu_{temp} + \mu_{pH} + \tau_{shear}}{\rho_{cell}} \right) $$")
+        st.markdown("Models active cell death based on cumulative environmental toxicity, unmixed hydrodynamic dead zones, and **hydrodynamic shear stress** ($\tau_{shear}$) introduced by excessive agitation.")
