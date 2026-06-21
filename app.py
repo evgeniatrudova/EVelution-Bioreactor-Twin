@@ -12,8 +12,8 @@
 import streamlit as st
 import numpy as np
 import pandas as pd
-import plotly.express as px
 import plotly.graph_objects as go
+import plotly.express as px
 
 # --- CORE BIOPHYSICAL ENGINE ---
 class BiogenesisEngine:
@@ -118,19 +118,38 @@ m4.metric("Cargo Consistency", "62.0%")
 st.progress(min(completion / 100, 1.0))
 st.write(f"**Goal Progress: {completion:.1f}%**")
 
-# --- DASHBOARD VISUALIZATION GRID ---
+import plotly.graph_objects as go
+import plotly.express as px
+
+# Define common aesthetic & layout parameters
+fixed_height = 400
+fixed_margin = dict(t=40, b=10, l=20, r=20)
+color_green = "#77DD77"
+color_blue = "#779ECB"
+color_purple = "#B39EB5"
+
 st.divider()
 st.subheader("Analytics")
 
-# Create two rows of two columns each
 row1_col1, row1_col2 = st.columns(2)
 row2_col1, row2_col2 = st.columns(2)
 
 # 1. Process Accumulation (Row 1, Left)
 with row1_col1:
-    st.markdown("### Process ")
-    fig_acc = px.line(df, x="Hour", y=["Therapeutic EVs", "Stress-Altered EVs", "Apoptotic Impurities"], log_y=True)
+    st.markdown("### Process Accumulation")
+    fig_acc = px.line(
+        df, x="Hour", 
+        y=["Therapeutic EVs", "Stress-Altered EVs", "Apoptotic Impurities"], 
+        log_y=True,
+        color_discrete_map={
+            "Therapeutic EVs": color_green,
+            "Stress-Altered EVs": color_purple,
+            "Apoptotic Impurities": color_blue
+        }
+    )
+    fig_acc.update_layout(height=fixed_height, margin=fixed_margin)
     st.plotly_chart(fig_acc, use_container_width=True)
+    
     with st.expander("Explore Logic"):
         tab_bio, tab_mod = st.tabs(["Biology", "Model"])
         tab_bio.markdown("Tracks therapeutic product and byproduct accumulation over time to identify the optimal harvest point before impurity dominance.")
@@ -139,37 +158,26 @@ with row1_col1:
 # 2. Cellular Viability (Row 1, Right)
 with row1_col2:
     st.markdown("### Cellular Viability")
-    
-    # Calculate the 'Death Cliff' point (first point viability drops below 20%)
     viability_data = df["Cell Viability (%)"]
     critical_points = df[viability_data < 20]
     
-    fig_via = px.line(df, x="Hour", y="Cell Viability (%)")
+    fig_via = px.line(df, x="Hour", y="Cell Viability (%)", color_discrete_sequence=[color_blue])
     
     if not critical_points.empty:
         critical_hour = critical_points.iloc[0]["Hour"]
         fig_via.add_trace(go.Scatter(
-            x=[critical_hour], y=[viability_data[critical_hour-1]],
+            x=[critical_hour], y=[viability_data.iloc[critical_hour-1]],
             mode='markers', marker=dict(size=12, color='#E39777', symbol='star'),
             name='Critical Failure'
         ))
     
-    fig_via.update_layout(height=400, margin=dict(t=30, b=0, l=10, r=10), showlegend=False)
+    fig_via.update_layout(height=fixed_height, margin=fixed_margin, showlegend=False)
     st.plotly_chart(fig_via, use_container_width=True)
     
     with st.expander("Explore Logic"):
         tab_bio, tab_mod = st.tabs(["Biology", "Model"])
-        tab_bio.markdown("""
-        Cell viability exhibits a rapid collapse once cumulative stress parameters (shear stress and toxic byproduct accumulation) surpass the homeostatic threshold. 
-        
-        This rapid decline is the 'Death Cliff,' where the rate of necrosis outpaces cellular repair mechanisms, signaling the transition from a productive culture to an apoptotic harvest profile.
-        """)
+        tab_bio.markdown("Cell viability exhibits a rapid collapse once cumulative stress parameters surpass the homeostatic threshold (the 'Death Cliff').")
         tab_mod.latex(r"\frac{dV}{dt} = -(\kappa_{tox} + \tau_{shear}) \quad \text{where } V < V_{threshold}")
-
-
-# Define common layout parameters
-fixed_height = 400
-fixed_margin = dict(t=30, b=0, l=10, r=10)
 
 # 3. Yield-to-Value Bridge (Row 2, Left)
 with row2_col1:
@@ -181,51 +189,40 @@ with row2_col1:
         y=["Raw Target Yield", "Intact EVs (Purity)", "Functional Value"],
         x=[raw_yield, purity_yield, true_val],
         textinfo="value+percent previous",
-        marker={"color": ["#636EFA", "#EF553B", "#00CC96"]}
+        marker={"color": [color_blue, color_purple, color_green]}
     ))
     
-    # Enforce standard dimensions
     fig_funnel.update_layout(height=fixed_height, margin=fixed_margin)
     st.plotly_chart(fig_funnel, use_container_width=True)
     
     with st.expander("Explore Logic"):
         tab_bio, tab_mod = st.tabs(["Biology", "Model"])
-        
-        tab_bio.markdown("""
-        Visualizes the loss cascade from crude bioreactor harvest to the final functional therapeutic product. 
-        Horizontal width of each segment quantitatively represents the total EV yield at that specific process stage. The narrowing vertical intervals between segments explicitly illustrate the cumulative loss (or 'drop-off') attributable to downstream purification and cargo loading efficiencies.
-        """)
-        
+        tab_bio.markdown("Visualizes the loss cascade. Horizontal width represents yield at each stage; narrowing intervals illustrate downstream processing losses.")
         tab_mod.latex(r"V_{final} = Yield_{raw} \cdot \eta_{purity} \cdot \phi_{consistency}")
 
 # 4. Yield Sensitivity Analysis (Row 2, Right)
 with row2_col2:
     st.markdown("### Yield Sensitivity Analysis")
     dur_range = range(12, 96, 6)
-    # Calculate sensitivity
     sens_data = [
         model.run_simulation(o2, temp, ph, mix, d, s_o2, s_temp, s_ph)["Therapeutic EVs"].sum() * vol * 1000 * 0.78 * 0.62 
         for d in dur_range
     ]
     
-    # Create the chart
-    fig_sens = px.line(x=list(dur_range), y=sens_data, labels={'x': 'Duration (h)', 'y': 'Total Yield'})
+    fig_sens = px.line(x=list(dur_range), y=sens_data, labels={'x': 'Duration (h)', 'y': 'Total Yield'}, color_discrete_sequence=[color_green])
     
-    # ADDED UX FEATURE: Highlight the 'Sweet Spot'
     max_idx = np.argmax(sens_data)
     fig_sens.add_trace(go.Scatter(
         x=[list(dur_range)[max_idx]], y=[sens_data[max_idx]],
-        mode='markers', marker=dict(size=12, color='#68B0AB', symbol='star'),
+        mode='markers', marker=dict(size=12, color='#E39777', symbol='star'),
         name='Optimal Harvest'
     ))
     
-    fig_sens.update_layout(height=400, margin=dict(t=30, b=0, l=10, r=10), showlegend=False)
+    fig_sens.update_layout(height=fixed_height, margin=fixed_margin, showlegend=False)
     st.plotly_chart(fig_sens, use_container_width=True)
     
     with st.expander("Explore Logic"):
         tab_bio, tab_mod = st.tabs(["Biology", "Model"])
-        tab_bio.markdown("""
-        This analysis maps the temporal 'sweet spot' for harvest. While longer durations initially increase total yield, the rate of accumulation eventually plateaus and declines due to cumulative cell necrosis and toxic byproduct buildup. The curve identifies the inflection point where the metabolic cost of extended culture time exceeds the incremental gain in therapeutic yield.
-        """)
+        tab_bio.markdown("Maps the temporal 'sweet spot' for harvest, identifying the inflection point where metabolic cost exceeds incremental gain.")
         tab_mod.latex(r"\frac{d}{dt}Yield(t) = 0 \text{ at } t_{optimal}")
         
