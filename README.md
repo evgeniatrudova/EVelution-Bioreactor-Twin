@@ -5,11 +5,16 @@ EVelution is a series of bioinformatics simulations. Bioreactor Twin is a digita
 # EVelution: Fed-Batch Bioreactor Digital Twin
 **Powered by the Multi-Machinery Model of EV Biogenesis**
 
-https://evelution-bio.streamlit.app/
+
 
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![Streamlit App](https://img.shields.io/badge/Streamlit-Live_Demo-FF4B4B.svg)](#live-demo)
 [![License: Copyright](https://img.shields.io/badge/License-Copyright_Evgenia_Trudova-red.svg)](#copyright--terms-of-use)
+
+
+<a href="https://evelution-bio.streamlit.app/">
+  <img width="1852" height="777" alt="Evelution Bio App" src="https://github.com/user-attachments/assets/9f7bed0f-dfad-4463-82f1-a720da349c51" />
+</a>
 
 ## Overview
 **EVelution** is a time-series bioinformatics simulation and digital twin designed for optimizing Extracellular Vesicle (EV) yield in industrial fed-batch bioreactors. 
