@@ -13,7 +13,7 @@ EVelution is a series of bioinformatics simulations. Bioreactor Twin is a digita
 
 
 <a href="https://evelution-bio.streamlit.app/">
-  <img width="1852" height="777" alt="Evelution Bio App" src="https://github.com/user-attachments/assets/9f7bed0f-dfad-4463-82f1-a720da349c51" />
+  <img width="1852" height="777" alt="Evelution Bio App" src="https://github.com/user-attachments/assets/ff37be63-63e1-4fee-8407-3510ed58de5c" />
 </a>
 
 ## Overview
