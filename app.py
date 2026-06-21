@@ -153,9 +153,41 @@ with st.sidebar:
     
     st.divider()
     st.header("Data")
-    if st.button("Export to PDF"): 
-        st.warning("Export functionality requires FPDF integration.")
-    st.file_uploader("Upload History File", type="csv")
+    
+    # --- PDF EXPORT FEATURE ---
+    st.markdown("**Export Current Simulation**")
+    pdf_bytes = generate_qms_pdf(
+        cell_line=selected_cell, vol=vol, dur=dur, target=target,
+        yield_val=true_val, purity=dynamic_purity, consistency=dynamic_consistency, q_score=quality_score
+    )
+    st.download_button(
+        label="Download PDF",
+        data=pdf_bytes,
+        file_name="EVelution_Bioreactor_Projection.pdf",
+        mime="application/pdf"
+    )
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # --- CSV UPLOAD (UX UPGRADED) ---
+    st.markdown("**Historical Benchmarking**")
+    
+    # UX Upgrade: Explicitly telling the user WHAT this feature does
+    st.info("💡 **Golden Batch Overlay:** Drop a CSV of your best historical run here. The engine will project it as a dashed 'ghost line' on your main graph so you can optimize against it in real-time.")
+    
+    uploaded_file = st.file_uploader(
+        "Upload History File (.csv)", 
+        type="csv",
+        help="Ensure your CSV contains 'Hour' and 'Therapeutic EVs' columns for the graph overlay to function."
+    )
+    
+    if uploaded_file is not None:
+        try:
+            historical_df = pd.read_csv(uploaded_file)
+            st.success(f"✅ Benchmark active! Loaded {len(historical_df)} data points.")
+            st.session_state['historical_df'] = historical_df
+        except Exception as e:
+            st.error(f"Could not read the file. Error: {e}")
 
 
 # --- 7. RUN SIMULATION & CALCS ---
