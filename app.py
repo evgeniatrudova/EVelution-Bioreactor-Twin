@@ -310,6 +310,7 @@ with r1c1:
     fig = px.line(df, x="Hour", y=["Therapeutic EVs", "Stress-Altered EVs", "Apoptotic Impurities"], log_y=True,
                   color_discrete_map={"Therapeutic EVs": C_GREEN, "Stress-Altered EVs": C_PURPLE, "Apoptotic Impurities": C_BLUE})
     
+    # Golden Batch Overlay Logic
     if 'historical_df' in st.session_state and st.session_state['historical_df'] is not None:
         hist_df = st.session_state['historical_df']
         if "Hour" in hist_df.columns and "Therapeutic EVs" in hist_df.columns:
@@ -321,6 +322,11 @@ with r1c1:
             
     fig.update_layout(height=fixed_height, margin=fixed_margin, hovermode="x unified")
     st.plotly_chart(fig, use_container_width=True)
+    
+    with st.expander("Explore Logic"):
+        t1, t2 = st.tabs(["Biology", "Model"])
+        t1.markdown("This graph tracks therapeutic accumulation versus impurity buildup. The harvest window is constrained by the impurity crossover point. Harvesting before this ensures optimal purity levels.")
+        t2.latex(r"\Phi_{total} = \Phi_{Therapeutic} + \Phi_{Stress} + \Phi_{Apoptotic}")
     
 with r1c2:
     st.markdown("### Cellular Viability")
