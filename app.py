@@ -28,7 +28,6 @@
 #    - Purity        = (Therapeutic_EVs + Stress_EVs) / Total_Yield
 #    - TRUE_VALUE    = Total_Yield * Consistency * Purity
 # ==============================================================================
-
 # ==============================================================================
 # FED-BATCH BIOREACTOR OPTIMISATION FOR EV YIELD PRODUCTION
 # ==============================================================================
@@ -225,8 +224,12 @@ fig_funnel.update_traces(textinfo="value+percent initial")
 fig_funnel.update_layout(margin=dict(l=20, r=20, t=20, b=20), height=300)
 st.plotly_chart(fig_funnel, use_container_width=True)
 
-with st.expander("Biological Mechanism: Downstream Value"):
-    st.markdown("Traditional biomanufacturing focuses on raw nanoparticle counts. However, downstream filtration and chromatography will strip out broken lipid husks and apoptotic bodies. This metric visualizes the harsh reality of processing: isolating only the structurally intact, therapeutically viable EVs from the crude harvest.")
+with st.expander("Explore the Downstream Value Model"):
+    tab1, tab2 = st.tabs(["Biology", "Model"])
+    with tab1:
+        st.markdown("Value -  Traditional biomanufacturing focuses on raw nanoparticle counts. This metric visualizes the harsh reality of processing and filtration: isolating only the structurally intact, therapeutically viable EVs from the crude harvest.")
+    with tab2:
+        st.markdown(r"$$ V_{functional} = (C_{harvest} \times V_{reactor}) \times \left(\frac{Purity}{100}\right) \times \left(\frac{Consistency}{100}\right) $$")
 
 st.divider()
 
@@ -246,8 +249,12 @@ with col_left:
     
     st.plotly_chart(fig_acc, use_container_width=True)
     
-    with st.expander("Biological Mechanism: Biogenesis vs. Stress"):
-        st.markdown("Cells naturally secrete baseline exosomes, but extreme shifts in their environment (like suddenly dropping oxygen or spiking temperatures) induce cellular panic. Before they die, stressed cells rapidly shed their membranes to eject toxins or send distress signals, leading to the massive explosion of stress-altered vesicles seen here.")
+    with st.expander("Explore Biogenesis Kinetics"):
+        tab1, tab2 = st.tabs(["Biology", "Model"])
+        with tab1:
+            st.markdown("Cells naturally secrete baseline exosomes, but extreme shifts in their environment (like suddenly dropping oxygen or spiking temperatures) induce cellular panic. Before they die, stressed cells rapidly shed their membranes to eject toxins or send distress signals, leading to the massive explosion of stress-altered vesicles seen here.")
+        with tab2:
+            st.markdown(r"$$ \frac{d(EV)}{dt} = k_{base}(1 - P_{grad}) + \sum_{s=1}^{n} k_{s}(|E_{opt} - E_{current}|)^m $$")
 
 with col_right:
     st.markdown("### Cellular Viability Curve")
@@ -255,10 +262,13 @@ with col_right:
     fig_viab.update_layout(margin=dict(l=0, r=0, t=0, b=0), yaxis_range=[0, 100])
     st.plotly_chart(fig_viab, use_container_width=True)
     
-    with st.expander("Biological Mechanism: Membrane Degradation"):
-        st.markdown("""
-        In a real bioreactor, cells don't die instantly—they suffer cumulative stress. This curve tracks how cell membrane integrity degrades over the batch duration. 
-        
-        * **Toxicity:** When oxygen drops too low, or stagnant dead zones cause acidic lactate to build up, the cells begin to suffocate and undergo necrosis. 
-        * **Physical Tearing:** Conversely, if the impeller spins too aggressively (setting mixing homogeneity too high), the violent fluid forces generate hydrodynamic shear stress, literally tearing the fragile cell membranes apart and causing an immediate viability crash.
-        """)
+    with st.expander("Explore Membrane Degradation"):
+        tab1, tab2 = st.tabs(["Biology", "Model"])
+        with tab1:
+            st.markdown("""
+            This curve tracks how cell membrane integrity degrades over the batch duration. 
+            When oxygen drops too low, or stagnant dead zones cause acidic lactate to build up, the cells begin to suffocate and undergo necrosis. 
+            Physical damage, caused by the impeller spinning too aggressively (setting mixing homogeneity too high), the violent fluid forces generate hydrodynamic shear stress, literally tearing the fragile cell membranes apart and causing an immediate viability crash.
+            """)
+        with tab2:
+            st.markdown(r"$$ Viability_{t} = Viability_{t-1} - \left( \frac{\mu_{o2} + \mu_{temp} + \mu_{pH} + \tau_{shear}}{\rho_{cell}} \right) $$")
