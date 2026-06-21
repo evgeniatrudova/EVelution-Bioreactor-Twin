@@ -93,19 +93,54 @@ with st.expander("Explore Logic", expanded=False):
         st.latex(r" \text{ Purity: } \eta_{purity} = \frac{EV_{purified}}{EV_{crude}}")
         st.latex(r" \text{ Consistency: } \phi_{consistency} = \frac{EV_{loaded}}{EV_{total}}")
 
+# --- CELL LINE DATABASE ---
+cell_line_db = {
+    "Human MSCs (Bone Marrow)": {"hypoxia": 1.10, "thermal": 0.85, "ph": 0.95},
+    "HEK293T (Suspension)": {"hypoxia": 0.90, "thermal": 1.05, "ph": 0.80},
+    "CHO-K1": {"hypoxia": 0.75, "thermal": 0.95, "ph": 1.10},
+    "Custom / Empirical": {"hypoxia": 1.00, "thermal": 1.00, "ph": 1.00}
+}
+
 # Sidebar
 with st.sidebar:
-    st.header("Calibration")
-    s_o2 = st.slider("Hypoxia Sensitivity", 0.0, 2.0, 1.2)
-    s_temp = st.slider("Thermal Sensitivity", 0.0, 2.0, 0.8)
-    s_ph = st.slider("pH Sensitivity", 0.0, 2.0, 0.9)
+    st.header("🧬 Cell Line Parameterization")
+    
+    # 1. Preset Selector
+    selected_cell = st.selectbox(
+        "Select Host Cell Line", 
+        list(cell_line_db.keys()),
+        help="Loads validated empirical kinetic parameters for the selected host."
+    )
+    
+    # Fetch default values based on selection
+    defaults = cell_line_db[selected_cell]
+    
+    # 2. Toggle for Manual Override
+    manual_override = st.toggle("Enable Manual Input (DoE Override)")
+    
+    # 3. Exact Number Inputs (Reactive to the toggle)
+    s_o2 = st.number_input("Hypoxia Modifier", min_value=0.0, max_value=3.0, value=defaults["hypoxia"], step=0.05, disabled=not manual_override)
+    s_temp = st.number_input("Thermal Modifier", min_value=0.0, max_value=3.0, value=defaults["thermal"], step=0.05, disabled=not manual_override)
+    s_ph = st.number_input("pH Modifier", min_value=0.0, max_value=3.0, value=defaults["ph"], step=0.05, disabled=not manual_override)
+    
+    st.divider()
+    
     st.header("Experimental")
     vol = st.number_input("Volume (L)", value=50.0)
-    o2, temp, ph = st.slider("Oxygen (%)", 0, 21, 21), st.slider("Temp (°C)", 30, 45, 37), st.slider("pH", 6.0, 8.0, 7.4)
-    mix, dur = st.slider("Mixing (%)", 50, 100, 85), st.slider("Duration (h)", 12, 72, 48)
+    
+    # Kept your sliders separated for cleaner rendering in Streamlit's UI
+    o2 = st.slider("Oxygen (%)", 0, 21, 21)
+    temp = st.slider("Temp (°C)", 30, 45, 37)
+    ph = st.slider("pH", 6.0, 8.0, 7.4)
+    mix = st.slider("Mixing (%)", 50, 100, 85)
+    dur = st.slider("Duration (h)", 12, 72, 48)
+    
     target = st.number_input("Target Yield", value=1e15, format="%.1e")
+    
     st.divider()
-    if st.button("Export to PDF"): st.warning("Export functionality requires FPDF integration.")
+    
+    if st.button("Export to PDF"): 
+        st.warning("Export functionality requires FPDF integration.")
     st.file_uploader("Upload History File", type="csv")
 
 # --- 4. RUN SIMULATION ---
