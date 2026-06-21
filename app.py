@@ -309,4 +309,15 @@ with r1c1:
     fig = px.line(df, x="Hour", y=["Therapeutic EVs", "Stress-Altered EVs", "Apoptotic Impurities"], log_y=True,
                   color_discrete_map={"Therapeutic EVs": C_GREEN, "Stress-Altered EVs": C_PURPLE, "Apoptotic Impurities": C_BLUE})
     
-    if 'historical_df
+    # --- THIS IS THE LINE TO FIX ---
+    if 'historical_df' in st.session_state and st.session_state['historical_df'] is not None:
+        hist_df = st.session_state['historical_df']
+        if "Hour" in hist_df.columns and "Therapeutic EVs" in hist_df.columns:
+            fig.add_trace(go.Scatter(
+                x=hist_df["Hour"], y=hist_df["Therapeutic EVs"],
+                mode='lines', name='Golden Batch Benchmark',
+                line=dict(color='rgba(255, 255, 255, 0.4)', width=3, dash='dash')
+            ))
+            
+    fig.update_layout(height=fixed_height, margin=fixed_margin, hovermode="x unified")
+    st.plotly_chart(fig, use_container_width=True)
