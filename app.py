@@ -20,12 +20,15 @@ import io
 # --- 1. THEME & STYLING ---
 st.set_page_config(page_title="EVelution Bioreactor Twin", layout="wide")
 
+# --- 2. CSS INJECTION ---
+# Keep all CSS here, strictly separate from your Python logic
 st.markdown("""
 <style>
     /* Blue-centric theme enforcement */
     :root { --primary-color: #779ECB; }
     .stSlider [data-baseweb="slider"] > div > div > div > div { background-color: #779ECB !important; }
-    #MainMenu {visibility: hidden;} footer {visibility: hidden;}
+    #MainMenu {visibility: hidden;} 
+    footer {visibility: hidden;}
     
     /* UX FIX: Force disabled buttons to remain highly visible */
     .stButton > button[disabled] {
@@ -33,11 +36,22 @@ st.markdown("""
         border: 1px solid #4B4B60 !important; 
         color: #B39EB5 !important;          
         background-color: transparent !important;
-        cursor: not-allowed !important;     
+        cursor: not-allowed !important;    
+    }
+    
+    /* Eevee-cube styling */
+    .eevee-cube {
+        width: 16px;
+        height: 16px;
+        background-color: #D78A4D; 
+        border: 1px solid #A66A3B;
+        cursor: pointer;
+        display: inline-block;
+        border-radius: 2px;
     }
 </style>
 """, unsafe_allow_html=True)
-
+    
 # --- 2. GLOBAL CONSTANTS ---
 fixed_height = 400
 fixed_margin = dict(t=40, b=10, l=20, r=20)
@@ -405,7 +419,7 @@ with r2c2:
         t2.latex(r"\frac{d}{dt}Yield(t) = 0 \quad at \quad t_{optimal}")
 
 
-# --- 1. SESSION STATE FOR THE POPUP ---
+# --- POPUP ---    
 if 'show_roadmap' not in st.session_state:
     st.session_state.show_roadmap = False
 
