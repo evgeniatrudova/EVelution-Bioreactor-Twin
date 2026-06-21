@@ -17,11 +17,11 @@ import plotly.express as px
 from io import BytesIO
 
 # --- 1. THEME & STYLING ---
-st.set_page_config(page_title="EVelution Bioreactor Twin", layout="wide")
+st.set_page_config(page_title="EVelution Bioreactor", layout="wide")
 st.markdown("""
 <style>
     :root {
-        --primary-color: #779ECB; /* Professional Blue */
+        --primary-color: #779ECB; 
         --background-color: #0E1117;
         --secondary-background-color: #1E1E2E;
         --text-color: #E0E0E0;
@@ -65,7 +65,7 @@ class FedBatchBioreactorModel:
         return pd.DataFrame(history)
 
 # --- 3. UI LAYOUT ---
-st.title("Bioreactor Optimisation")
+st.title("EVelution Bioreactor Optimisation")
 st.caption("Multi-Machinery Model | Default Cell Line: MSC | Author: Evgenia Trudova")
 
 # Main Foundation Dropdown
