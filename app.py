@@ -404,25 +404,65 @@ with r2c2:
         t1.markdown("Determines the 'sweet spot' for harvest duration. The inflection point occurs where incremental EV gain is offset by culture necrosis and byproduct toxicity.")
         t2.latex(r"\frac{d}{dt}Yield(t) = 0 \quad at \quad t_{optimal}")
 
+
+# --- 1. SESSION STATE FOR THE POPUP ---
+if 'show_roadmap' not in st.session_state:
+    st.session_state.show_roadmap = False
+
+def toggle_roadmap():
+    st.session_state.show_roadmap = not st.session_state.show_roadmap
+
+# --- THE FOOTER ---
 st.divider()
 st.markdown("""
-<div style="text-align: left; color: #A0A0B0; font-size: 0.85em; padding: 20px; background-color: #1E1E2E; border-radius: 8px; position: relative;">
-    
-    <div style="position: absolute; bottom: 15px; left: 15px; width: 20px; height: 20px; cursor: pointer;" 
-         onclick="window.parent.postMessage('toggle_roadmap', '*')">
-        <div style="width: 100%; height: 100%; background-color: #FFB90F; border: 1px solid #CC8400; border-radius: 2px;"></div>
-    </div>
+<style>
+    div[data-testid="stVerticalBlock"] > div:has(button.pixel-cube) {
+        position: absolute;
+        bottom: 25px;
+        left: 25px;
+    }
+    button.pixel-cube {
+        width: 20px;
+        height: 20px;
+        background-color: #FFB90F !important;
+        border: 1px solid #CC8400 !important;
+        padding: 0 !important;
+        border-radius: 2px !important;
+        cursor: pointer !important;
+    }
+    button.pixel-cube:hover {
+        background-color: #FFA500 !important;
+    }
+</style>
+""", unsafe_allow_html=True)
 
+# Footer Content
+st.markdown("""
+<div style="text-align: left; color: #A0A0B0; font-size: 0.85em; padding: 20px; background-color: #1E1E2E; border-radius: 8px; position: relative;">
     <h4 style="color: #779ECB; margin-top: 0; padding-left: 30px;">Traceability & Academic Source Verification:</h4>
     <div style="padding-left: 30px;">
         <b>[1] Core Engine (MMModel):</b> Trudova, E. (2026). <i>Extracellular vesicles: biogenesis, co-evolution and insights from parasitology.</i> Swedish University of Agricultural Sciences (SLU). <a href="https://stud.epsilon.slu.se/22206/" target="_blank" style="color: #779ECB;">URN: urn:nbn:se:slu:epsilon-s-22206</a><br>
         <b>[2] Human MSCs:</b> Liu et al. (2015). <i>The Effect of Hypoxia on Mesenchymal Stem Cell Biology.</i> PLoS One. <a href="https://doi.org/10.1371/journal.pone.0126715" target="_blank" style="color: #779ECB;">DOI: 10.1371/journal.pone.0126715</a><br>
         <b>[3] HEK293T:</b> Furdui et al. (2021). <i>Enhancement of Transgene Expression by Mild Hypothermia.</i> Biotechnol Prog. <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC8469586/" target="_blank" style="color: #779ECB;">PMC8469586</a><br>
-        <b>[4] CHO-K1:</b> Pan et al. (2017). <i>Metabolic characterization of a CHO cell size increase phase.</i> BMC Biotechnol. <a href="https://doi.org/10.1007/s00253-017-8531-y" target="_blank" style="color: #779ECB;">https://doi.org/10.1007/s00253-017-8531-y</a><br>
-    </div>
-    
-    <div style="text-align: center; margin-top: 15px;">
-        <i>EVelution-bio Digital Twin Engine | Engineered for QMS-Compliant Bioprocess Optimization</i>
+        <b>[4] CHO-K1:</b> Pan et al. (2017). <i>Metabolic characterization of a CHO cell size increase phase.</i> BMC Biotechnol. <a href="https://doi.org/10.1007/s00253-017-8531-y" target="_blank" style="color: #779ECB;">https://doi.org/10.1007/z00253-017-8531-y</a><br>
     </div>
 </div>
 """, unsafe_allow_html=True)
+
+# The Clickable Cube 
+if st.button(" ", key="cube_trigger", help="EVelution Roadmap", on_click=toggle_roadmap):
+    pass
+st.markdown("""<script>
+    var buttons = document.querySelectorAll('button');
+    buttons.forEach(function(btn) {
+        if (btn.innerText === "") { btn.className = 'pixel-cube'; }
+    });
+</script>""", unsafe_allow_html=True)
+
+if st.session_state.show_roadmap:
+    with st.popover("Development Roadmap", expanded=True):
+        st.subheader("EVelution Roadmap")
+        st.progress(0.15)
+        st.markdown("""
+
+        """)
