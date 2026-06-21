@@ -180,20 +180,32 @@ with row2_col1:
 
 # 4. Yield Sensitivity Analysis (Row 2, Right)
 with row2_col2:
-    st.markdown("### Yield Sensitivity")
+    st.markdown("### Yield Sensitivity Analysis")
     dur_range = range(12, 96, 6)
+    # Calculate sensitivity
     sens_data = [
         model.run_simulation(o2, temp, ph, mix, d, s_o2, s_temp, s_ph)["Therapeutic EVs"].sum() * vol * 1000 * 0.78 * 0.62 
         for d in dur_range
     ]
     
+    # Create the chart
     fig_sens = px.line(x=list(dur_range), y=sens_data, labels={'x': 'Duration (h)', 'y': 'Total Yield'})
     
-    # Enforce standard dimensions to match the funnel
-    fig_sens.update_layout(height=fixed_height, margin=fixed_margin)
+    # ADDED UX FEATURE: Highlight the 'Sweet Spot'
+    max_idx = np.argmax(sens_data)
+    fig_sens.add_trace(go.Scatter(
+        x=[list(dur_range)[max_idx]], y=[sens_data[max_idx]],
+        mode='markers', marker=dict(size=12, color='#68B0AB', symbol='star'),
+        name='Optimal Harvest'
+    ))
+    
+    fig_sens.update_layout(height=400, margin=dict(t=30, b=0, l=10, r=10), showlegend=False)
     st.plotly_chart(fig_sens, use_container_width=True)
     
     with st.expander("Explore Logic"):
         tab_bio, tab_mod = st.tabs(["Biology", "Model"])
-        tab_bio.markdown("Maps the batch duration 'sweet spot' where yield is maximized before cell necrosis dominates.")
-        tab_mod.latex(r"Yield_{target} = \int_{0}^{t} \Phi(t) dt")
+        tab_bio.markdown("""
+        This analysis maps the temporal 'sweet spot' for harvest. While longer durations initially increase total yield, the rate of accumulation eventually plateaus and declines due to cumulative cell necrosis and toxic byproduct buildup. The curve identifies the inflection point where the metabolic cost of extended culture time exceeds the incremental gain in therapeutic yield.
+        """)
+        tab_mod.latex(r"\frac{d}{dt}Yield(t) = 0 \text{ at } t_{optimal}")
+        
