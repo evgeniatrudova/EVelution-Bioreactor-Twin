@@ -168,11 +168,12 @@ with st.sidebar:
     dur = st.slider("Duration (h)", 12, 72, 48)
     st.divider()
 
-    st.header("Harvest")
+    st.header("Yield")
     target = st.number_input("Target Yield", value=1e15, format="%.1e")
     
     st.divider()
     
+    st.header("Data")
     if st.button("Export to PDF"): 
         st.warning("Export functionality requires FPDF integration.")
     st.file_uploader("Upload History File", type="csv")
