@@ -418,65 +418,69 @@ with r2c2:
         t1.markdown("Determines the 'sweet spot' for harvest duration. The inflection point occurs where incremental EV gain is offset by culture necrosis and byproduct toxicity.")
         t2.latex(r"\frac{d}{dt}Yield(t) = 0 \quad at \quad t_{optimal}")
 
-# --- THE FOOTER ---
-st.divider()
+import streamlit as st
 
-# RENDER FOOTER LAYOUT
-with st.container():
-    # We use a flexbox container to lock the text to the left and cube to the right
-    st.markdown("""
-    <div style="display: flex; justify-content: space-between; align-items: flex-start; 
-                background-color: #1E1E2E; padding: 20px; border-radius: 8px; position: relative;">
-        
-        <div style="color: #A0A0B0; font-size: 0.8em; flex: 1;">
-            <h4 style="color: #779ECB; margin-top: 0; margin-bottom: 10px;">Traceability & Academic Source Verification:</h4>
-            <ul style="list-style-type: none; padding-left: 0; margin: 0;">
-                <li>[1] Core Engine: <a href="https://stud.epsilon.slu.se/22206/" style="color: #779ECB;">Trudova (2026)</a></li>
-                <li>[2] MSCs: <a href="https://doi.org/10.1371/journal.pone.0126715" style="color: #779ECB;">Liu et al. (2015)</a></li>
-                <li>[3] HEK293T: <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC8469586/" style="color: #779ECB;">Furdui et al. (2021)</a></li>
-                <li>[4] CHO-K1: <a href="https://doi.org/10.1007/s00253-017-8531-y" style="color: #779ECB;">Pan et al. (2017)</a></li>
-            </ul>
-        </div>
-        
-        <div id="cube-anchor" style="width: 20px;"></div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # Popover acts as the button - placing it here renders it inside the container
-    with st.popover(" "):
-        st.subheader("🚀 Roadmap")
-        st.write("Targeting: Cloud API, Sensor Integration, Sensitivity Intervals.")
-
-# --- FINAL CSS OVERRIDE ---
-# This forces the button to shrink and position correctly, ignoring Streamlit defaults
+# --- 1. CSS FOR THE CUBE ---
 st.markdown("""
 <style>
-    /* 1. Force the popover button to shrink to 16px */
-    [data-testid="stPopover"] > button {
-        position: absolute !important;
-        top: 20px !important;
-        right: 20px !important;
+    /* 1. Define the Cube Class */
+    .eevee-cube-btn {
         width: 16px !important;
         height: 16px !important;
-        padding: 0 !important;
         background-color: #2A2A3A !important;
         border-top: 1px solid #10101A !important;
         border-left: 1px solid #10101A !important;
         border-right: 3px solid #000000 !important;
         border-bottom: 3px solid #000000 !important;
         border-radius: 2px !important;
+        cursor: pointer !important;
         transition: all 0.3s ease !important;
     }
-
-    /* 2. Eevee Orange hover effect */
-    [data-testid="stPopover"] > button:hover {
+    
+    /* 2. Hover Effect */
+    .eevee-cube-btn:hover {
         background-color: #D78A4D !important;
         border-color: #A66A3B !important;
     }
-
-    /* 3. Kill the arrow */
-    [data-testid="stPopover"] > button > div { display: none !important; }
+    
+    /* 3. Hide Streamlit button border/shadow */
+    div.stButton > button {
+        border: none !important;
+        padding: 0 !important;
+    }
 </style>
 """, unsafe_allow_html=True)
+
+# --- 2. FOOTER LAYOUT ---
+st.divider()
+
+if 'show_roadmap' not in st.session_state:
+    st.session_state.show_roadmap = False
+
+def toggle_roadmap():
+    st.session_state.show_roadmap = not st.session_state.show_roadmap
+
+# Layout container
+with st.container():
+    # Force alignment
+    col1, col2 = st.columns([0.95, 0.05])
     
-    st.markdown('</div>', unsafe_allow_html=True)
+    with col1:
+        st.markdown("""
+        <div style="color: #A0A0B0; font-size: 0.8em; margin-top: 10px;">
+            <b>Traceability & Academic Source Verification:</b><br>
+            [1] Trudova (2026) | [2] Liu et al. (2015) | [3] Furdui et al. (2021) | [4] Pan et al. (2017)
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        # A standard button, but we manually style it via the button_style hack
+        st.markdown('<style>div.stButton > button:first-child { background: transparent; width: 16px; height: 16px; padding:0; }</style>', unsafe_allow_html=True)
+        if st.button(" ", key="cube_btn", help="Roadmap"):
+            toggle_roadmap()
+            # Inject CSS to apply the class
+            st.markdown('<script>$("button[key=cube_btn]").addClass("eevee-cube-btn");</script>', unsafe_allow_html=True)
+
+# --- 3. SHOW THE ROADMAP ---
+if st.session_state.show_roadmap:
+    st.info("🚀 **Roadmap in Development:** Cloud API, Sensor Integration, Sensitivity Intervals.")
