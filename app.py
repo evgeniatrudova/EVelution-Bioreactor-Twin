@@ -16,8 +16,7 @@ import plotly.express as px
 
 # --- CORE BIOPHYSICAL ENGINE (Thesis Formulas) ---
 class BiogenesisEngine:
-    """Implements the MMModel differential equations."""
-    
+    """Implements the Multi-Machinery Model (MMModel) differential equations."""
     @staticmethod
     def calc_flux(o2, temp, ph, s_o2, s_temp, s_ph, base_rate):
         # Constants
@@ -67,12 +66,12 @@ class FedBatchBioreactorModel:
         return pd.DataFrame(history)
 
 # --- STREAMLIT FRONTEND UI ---
-st.set_page_config(page_title="EVelution Engine", layout="wide")
+st.set_page_config(page_title="EVelution Digital Twin", layout="wide")
 
 st.title("Bioreactor Optimisation")
-st.caption("Default Configuration: Mesenchymal Stromal Cells | MMModel ")
+st.caption("Multi-Machinery Model (MMModel) Biophysical Twin | Author: Evgenia Trudova")
 
-# MMModel Explanation
+# --- MODEL FOUNDATION EXPANDER ---
 with st.expander("Model Foundation & Biophysical Formulas"):
     st.markdown("This engine utilizes phenotypic sensitivity coefficients to model EV biogenesis across any cell line.")
     col_math1, col_math2 = st.columns(2)
@@ -89,39 +88,52 @@ with st.expander("Model Foundation & Biophysical Formulas"):
 
 st.divider()
 
-# --- SIDEBAR: ORGANIZED HIERARCHY WITH MSC DEFAULTS ---
+# --- SIDEBAR: REORGANIZED HIERARCHY ---
 with st.sidebar:
-    st.header("Cell Line")
-    s_o2 = st.slider("Hypoxia Sensitivity", 0.0, 2.0, 1.2, help="MSC baseline sensitivity to O2 tension")
+    st.header("Calibration")
+    s_o2 = st.slider("Hypoxia Sensitivity", 0.0, 2.0, 1.2)
     s_temp = st.slider("Thermal Sensitivity", 0.0, 2.0, 0.8)
     s_ph = st.slider("pH Sensitivity", 0.0, 2.0, 0.9)
     
     st.divider()
     
-    st.header("Experimental")
+    st.header("Experimental Parameters")
     vol = st.number_input("Volume (L)", value=50.0)
-    o2 = st.slider("Oxygen (%)", 0.0, 21.0, 21.0) # Standard Normoxia
-    temp = st.slider("Temp (°C)", 30.0, 45.0, 37.0) # MSC Optimal
-    ph = st.slider("pH", 6.0, 8.0, 7.4) # MSC Optimal
+    o2 = st.slider("Oxygen (%)", 0.0, 21.0, 21.0)
+    temp = st.slider("Temp (°C)", 30.0, 45.0, 37.0)
+    ph = st.slider("pH", 6.0, 8.0, 7.4)
     mix = st.slider("Mixing (%)", 50.0, 100.0, 85.0)
     dur = st.slider("Duration (h)", 12, 72, 48)
     
     st.divider()
     
-    st.header("File Managment")
+    st.header("Desired Yield")
     target_clinical_yield = st.number_input("Desired Yield (EVs)", value=1e15, format="%.1e")
-    uploaded_file = st.file_uploader("Upload CSV", type=["csv"])
-    if st.button("Export PDF Report"):
-        st.info("Generating PDF report...")
+    
+    st.divider()
+    
+    st.header("Data Management")
+    st.file_uploader("Upload Run Data (CSV)", type=["csv"])
+    if st.button("Export to PDF Report"):
+        st.info("Generating report...")
 
-# --- SIMULATION & DASHBOARD ---
+# --- SIMULATION & CALCULATIONS ---
 model = FedBatchBioreactorModel()
 df = model.run_simulation(o2, temp, ph, mix, dur, s_o2, s_temp, s_ph)
 
-col1, col2, col3 = st.columns(3)
-col1.metric("Predicted Yield", f"{df['Therapeutic EVs'].sum()*vol:.2e}")
+# Final Metrics
+final_thera = df["Therapeutic EVs"].iloc[-1] * vol * 1000
+purity = 0.78 
+consistency = 0.62 
+true_val = final_thera * purity * consistency
+goal_delta = true_val - target_clinical_yield
+
+# --- DASHBOARD RENDER ---
+col1, col2, col3, col4 = st.columns(4)
+col1.metric("Predicted Functional Value", f"{true_val:.2e}", f"{goal_delta:.1e} vs Goal")
 col2.metric("Harvest Concentration", f"{df['Therapeutic EVs'].iloc[-1]:.2e} ev/mL")
-col3.metric("Viability", f"{df['Cell Viability (%)'].iloc[-1]:.1f}%")
+col3.metric("Downstream Purity", f"{purity*100:.1f}%")
+col4.metric("Cargo Consistency", f"{consistency*100:.1f}%")
 
 st.divider()
 
@@ -130,7 +142,18 @@ with col_left:
     st.markdown("### Process Accumulation")
     fig = px.line(df, x="Hour", y=["Therapeutic EVs", "Apoptotic Impurities"], log_y=True)
     st.plotly_chart(fig, use_container_width=True)
+    
+    with st.expander("Explore Logic"):
+        tab_bio, tab_mod = st.tabs(["Biology", "Model"])
+        tab_bio.markdown("Dynamics based on cell membrane stability and metabolic stress response.")
+        tab_mod.markdown(r"Calculated using non-linear sensitivity coefficients $\sigma_{o2}, \sigma_{temp}, \sigma_{ph}$.")
+
 with col_right:
     st.markdown("### Cellular Viability")
     fig2 = px.line(df, x="Hour", y="Cell Viability (%)")
     st.plotly_chart(fig2, use_container_width=True)
+    
+    with st.expander("Explore Membrane Degradation"):
+        tab_bio, tab_mod = st.tabs(["Biology", "Model"])
+        tab_bio.markdown("Cumulative environmental load causes necrosis and hydrodynamic tearing.")
+        tab_mod.markdown(r"$$ Viability_{t} = Viability_{t-1} - \tau_{shear} $$")
