@@ -15,6 +15,12 @@ import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
 
+fixed_height = 400
+fixed_margin = dict(t=40, b=10, l=20, r=20)
+color_green = "#77DD77"
+color_blue = "#779ECB"
+color_purple = "#B39EB5"
+
 # --- CORE BIOPHYSICAL ENGINE ---
 class BiogenesisEngine:
     @staticmethod
@@ -117,13 +123,6 @@ m3.metric("Downstream Purity", "78.0%")
 m4.metric("Cargo Consistency", "62.0%")
 st.progress(min(completion / 100, 1.0))
 st.write(f"**Goal Progress: {completion:.1f}%**")
-
-fixed_height = 400
-fixed_margin = dict(t=40, b=10, l=20, r=20)
-color_green = "#77DD77"
-color_blue = "#779ECB"
-color_purple = "#B39EB5"
-
 st.divider()
 st.subheader("Analytics")
 
