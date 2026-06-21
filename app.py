@@ -148,7 +148,7 @@ with st.sidebar:
     defaults = cell_line_db[selected_cell]
     
     # 2. Toggle for Manual Override
-    manual_override = st.toggle("Enable Manual Input (DoE Override)")
+    manual_override = st.toggle("Enable Manual Input")
     
     # 3. Exact Number Inputs (Reactive to the toggle)
     s_o2 = st.number_input("Hypoxia Modifier", min_value=0.0, max_value=3.0, value=defaults["hypoxia"], step=0.05, disabled=not manual_override)
@@ -203,6 +203,45 @@ m2.metric("Harvest Conc", f"{df['Therapeutic EVs'].iloc[-1]:.2e} ev/mL")
 # Displaying the dynamic % values
 m3.metric("Downstream Purity", f"{dynamic_purity*100:.1f}%")
 m4.metric("Cargo Consistency", f"{dynamic_consistency*100:.1f}%")
+
+# --- BATCH EVALUATION BANNER ---
+st.markdown("### Batch Success Evaluation")
+
+# 1. Bioinformatics Logic: Calculate metrics
+yield_achievement = (true_val / target) * 100
+# Quality score is the combined penalty of impurities and empty EVs
+quality_score = (dynamic_purity * dynamic_consistency) * 100 
+
+# 2. UX Logic: Determine the status color and message
+if yield_achievement >= 100 and quality_score >= 40.0:
+    status_color = "#77DD77" # Green
+    status_icon = "✅"
+    status_text = "OPTIMAL: Target reached with viable quality."
+elif yield_achievement >= 100 and quality_score < 40.0:
+    status_color = "#E39777" # Orange
+    status_icon = "⚠️"
+    status_text = "WARNING: Target reached, but severe quality degradation detected. High risk of DSP failure."
+else:
+    status_color = "#779ECB" # Blue
+    status_icon = "🛑"
+    status_text = "DEFICIENT: Target not reached. Increase duration or optimize cell line sensitivity."
+
+# 3. UI Rendering: The Evaluation Card
+st.markdown(f"""
+<div style="background-color: #1E1E2E; padding: 20px; border-radius: 8px; border-left: 6px solid {status_color}; display: flex; align-items: center; justify-content: space-between;">
+    <div>
+        <h4 style="margin: 0; color: {status_color};">{status_icon} {status_text}</h4>
+    </div>
+    <div style="text-align: right;">
+        <div style="font-size: 0.9em; color: #B39EB5;">Yield vs Target</div>
+        <div style="font-size: 1.5em; font-weight: bold; color: {status_color};">{yield_achievement:.1f}%</div>
+    </div>
+    <div style="text-align: right; padding-left: 20px; border-left: 1px solid #333;">
+        <div style="font-size: 0.9em; color: #B39EB5;">Overall Quality Score</div>
+        <div style="font-size: 1.5em; font-weight: bold; color: {'#77DD77' if quality_score >= 40 else '#E39777'};">{quality_score:.1f}%</div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
 # --- 5. ANALYTICS GRID ---
 st.divider()
