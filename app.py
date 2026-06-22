@@ -127,18 +127,31 @@ class FedBatchBioreactorModel:
             
         return pd.DataFrame(history)
 
-    def run_simulation(self, init_o2, target_temp, target_ph, mixing_homogeneity, duration_hours, s_o2, s_temp, s_ph):
+    def run_simulation(self, init_o2, target_temp, target_ph, mixing_homogeneity, duration_hours, s_o2, s_temp, s_ph, biomass_series):
         viability = 100.0
         history = {"Hour": [], "Therapeutic EVs": [], "Stress-Altered EVs": [], "Apoptotic Impurities": [], "Cell Viability (%)": []}
+        
         for hour in range(1, duration_hours + 1):
-            rate = BiogenesisEngine.calc_flux(init_o2, target_temp, target_ph, s_o2, s_temp, s_ph, self.base_rate)
+            # EXTRACT: Get active biomass for the current hour (index is hour - 1)
+            active_biomass = biomass_series.iloc[hour - 1] if hasattr(biomass_series, 'iloc') else biomass_series[hour - 1]
+            
+            # COUPLE: Scale specific productivity (q_EV) by active biomass (X)
+            dynamic_base_rate = self.base_rate * active_biomass
+            
+            # CALCULATE FLUX
+            rate = BiogenesisEngine.calc_flux(init_o2, target_temp, target_ph, s_o2, s_temp, s_ph, dynamic_base_rate)
+            
+            # SHEAR & VIABILITY LOGIC
             shear = ((mixing_homogeneity - 85.0)**1.5 * 0.1) if mixing_homogeneity > 85 else 0
             viability = max(0, viability - (0.5 + shear))
+            
             history["Hour"].append(hour)
             history["Therapeutic EVs"].append(rate * (viability / 100))
             history["Stress-Altered EVs"].append(rate * ((100 - viability) / 100) * 0.3)
-            history["Apoptotic Impurities"].append(self.base_rate * ((100 - viability) / 100) * 5)
+            # Ensure apoptotic impurities also scale with the dynamic biomass
+            history["Apoptotic Impurities"].append(dynamic_base_rate * ((100 - viability) / 100) * 5)
             history["Cell Viability (%)"].append(viability)
+            
         return pd.DataFrame(history)
 
 # --- 4. ADVANCED PDF GENERATOR ---
@@ -275,18 +288,19 @@ with st.sidebar:
     target = target_base * (10 ** target_exp)
     st.markdown(f"<div style='text-align: right; color: #77DD77; font-size: 0.9em;'><b>Active Target: {target:.1e} EVs</b></div>", unsafe_allow_html=True)
 
-# --- 8. RUN SIMULATION & GENERATE GRAPHS ---
+# --- 8. SIMULATION & GRAPHS ---
 model = FedBatchBioreactorModel()
 
-# Run EV simulation
-df = model.run_simulation(o2, temp, ph, mix, dur, s_o2, s_temp, s_ph)
-
-# NEW: Run Mass Balance integration
+# RUN MASS BALANCE FIRST to get X(t)
 mb_df = model.run_mass_balance(vol, s_0, f_in, s_in, mu_max, o2, temp, ph, dur)
 final_biomass = mb_df["Biomass (g/L)"].iloc[-1]
 final_substrate = mb_df["Substrate (g/L)"].iloc[-1]
 final_vol = mb_df["Volume (L)"].iloc[-1]
 
+# RUN EV SIMULATION using the dynamic Biomass series
+df = model.run_simulation(o2, temp, ph, mix, dur, s_o2, s_temp, s_ph, mb_df["Biomass (g/L)"])
+
+# CALCULATE YIELD METRICS
 avg_viability = df["Cell Viability (%)"].mean() / 100.0
 impurity_ratio = df["Apoptotic Impurities"].iloc[-1] / (df["Therapeutic EVs"].iloc[-1] + 1e-9)
 
@@ -294,12 +308,11 @@ dynamic_purity = max(0.2, 0.78 * (1.0 / (1.0 + (impurity_ratio * 0.05))))
 dynamic_consistency = max(0.3, 0.62 * (avg_viability ** 0.5)) 
 
 total_prod = df["Therapeutic EVs"].sum()
-# Updated true_val to link to the dynamic Final Volume calculated by the Mass Balance ODE
 true_val = total_prod * final_vol * 1000 * dynamic_purity * dynamic_consistency
 yield_achievement = (true_val / target) * 100
-quality_score = (dynamic_purity * dynamic_consistency) * 100 
+quality_score = (dynamic_purity * dynamic_consistency) * 100
 
-# Build Figure 0: NEW Monod Mass Balance
+# Build Figure 0
 fig_monod = go.Figure()
 fig_monod.add_trace(go.Scatter(x=mb_df["Hour"], y=mb_df["Biomass (g/L)"], mode='lines', name='Biomass (g/L)', line=dict(color=C_BLUE, width=3)))
 fig_monod.add_trace(go.Scatter(x=mb_df["Hour"], y=mb_df["Substrate (g/L)"], mode='lines', name='Substrate (g/L)', line=dict(color=C_GREEN, width=3)))
@@ -336,8 +349,18 @@ fig_funnel.update_layout(height=fixed_height, margin=fixed_margin)
 
 # Build Figure 4: Sensitivity
 sens_range = list(range(12, 96, 6))
-# Apply final_vol scalar to sensitivity plot logic
-sens_data = [model.run_simulation(o2, temp, ph, mix, d, s_o2, s_temp, s_ph)["Therapeutic EVs"].sum() * final_vol * 1000 * 0.78 * 0.62 for d in sens_range]
+sens_data = []
+
+# Loop dynamically to ensure Biomass and Volume scale per duration step
+for d in sens_range:
+    temp_mb = model.run_mass_balance(vol, s_0, f_in, s_in, mu_max, o2, temp, ph, d)
+    temp_vol = temp_mb["Volume (L)"].iloc[-1]
+    
+    # Pass the isolated duration's biomass series into the simulation
+    temp_df = model.run_simulation(o2, temp, ph, mix, d, s_o2, s_temp, s_ph, temp_mb["Biomass (g/L)"])
+    
+    step_yield = temp_df["Therapeutic EVs"].sum() * temp_vol * 1000 * 0.78 * 0.62
+    sens_data.append(step_yield)
 
 variance_percentages = np.linspace(0.02, 0.15, len(sens_range))
 upper_bound = [val * (1 + var) for val, var in zip(sens_data, variance_percentages)]
