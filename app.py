@@ -18,7 +18,7 @@ from fpdf import FPDF
 import io
 
 # --- 1. THEME & STYLING ---
-st.set_page_config(page_title="EVelution Bioreactor Twin", layout="wide")
+st.set_page_config(page_title="EVelution Bioreactor Twin", layout="wide", initial_sidebar_state="auto")
 
 # --- 2. CSS INJECTION ---
 # Keep all CSS here, strictly separate from your Python logic
@@ -38,12 +38,38 @@ st.markdown("""
         background-color: transparent !important;
         cursor: not-allowed !important;    
     }
+
+    /* MOBILE RESPONSIVENESS FIXES */
+    @media (max-width: 768px) {
+        .status-card {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 15px !important;
+        }
+        .status-card-metric {
+            text-align: left !important;
+            padding-left: 0 !important;
+            border-left: none !important;
+            border-top: 1px solid #4B4B60 !important;
+            padding-top: 10px !important;
+            width: 100% !important;
+        }
+        .legal-disclaimer {
+            font-size: 0.70em !important;
+            word-wrap: break-word !important;
+            overflow-wrap: break-word !important;
+        }
+        [data-testid="stMetricValue"] {
+            font-size: 1.5rem !important;
+        }
+    }
 </style>
 """, unsafe_allow_html=True)
     
 # --- 2. GLOBAL CONSTANTS ---
 fixed_height = 400
-fixed_margin = dict(t=40, b=10, l=20, r=20)
+# MOBILE FIX: Reduced side margins from 20 to 10 to prevent clipping
+fixed_margin = dict(t=40, b=10, l=10, r=10)
 C_GREEN, C_BLUE, C_PURPLE, C_STAR = "#77DD77", "#779ECB", "#B39EB5", "#E39777"
 
 # --- 3. BIOPHYSICAL ENGINE ---
@@ -244,7 +270,8 @@ if 'historical_df' in st.session_state and st.session_state['historical_df'] is 
             mode='lines', name='Golden Batch Benchmark',
             line=dict(color='rgba(227, 82, 82, 0.7)', width=3, dash='dash')
         ))
-fig_accum.update_layout(height=fixed_height, margin=fixed_margin, hovermode="x unified")
+# MOBILE FIX: Repositioned legend horizontally so it doesn't crush the graph on phones
+fig_accum.update_layout(height=fixed_height, margin=fixed_margin, hovermode="x unified", legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
 
 # Build Figure 2: Viability
 crit = df[df["Cell Viability (%)"] < 50.0]
@@ -364,8 +391,9 @@ with st.sidebar:
             del st.session_state['csv_uploader']
         st.rerun()
 
+    # MOBILE FIX: Added class="legal-disclaimer" here to trigger mobile text wrapping
     st.markdown("""
-    <div style="font-size: 0.75em; color: #808080; margin-top: 20px; padding-top: 15px; border-top: 1px solid #333; line-height: 1.4; text-align: justify;">
+    <div class="legal-disclaimer" style="font-size: 0.75em; color: #808080; margin-top: 20px; padding-top: 15px; border-top: 1px solid #333; line-height: 1.4; text-align: justify;">
         <b>DATA GOVERNANCE AND LIABILITY DISCLAIMER</b><br>
         Data uploaded to this application is processed strictly in volatile memory (RAM) for ephemeral visualization. The architecture contains no persistent storage, logging, or external transmission protocols. By utilizing this software, end-users assume absolute liability for the safeguarding of proprietary technical trade secrets, in compliance with the Swedish Trade Secrets Act (SFS 2018:558, as amended 2026), the EU Trade Secrets Directive (2016/943), and the US Defend Trade Secrets Act (DTSA). Furthermore, operations align with global electronic record frameworks (FDA 21 CFR Part 11, EMA Annex 11) and international data sovereignty laws (GDPR) via zero-retention processing. Under international safe harbor and ephemeral data processing doctrines, this application acts purely as a localized execution environment, legally exempting the provider from data hosting, processor, and controller liabilities. Users are legally obligated to execute the internal data purge protocol upon session termination.
     </div>
@@ -409,18 +437,19 @@ else:
     status_icon = "🛑"
     status_text = "DEFICIENT: Target volume not reached. Extend duration or adjust feeding."
 
+# MOBILE FIX: Added flex-wrap and status-card classes so this grid stacks on small screens
 st.markdown(f"""
-<div style="background-color: #1E1E2E; padding: 20px; border-radius: 8px; border-left: 6px solid {status_color}; display: flex; align-items: center; justify-content: space-between;">
-    <div style="flex: 1;">
-        <h4 style="margin: 0; color: {status_color}; display: flex; align-items: center;">
-            {status_icon} {status_text}
+<div class="status-card" style="background-color: #1E1E2E; padding: 20px; border-radius: 8px; border-left: 6px solid {status_color}; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px;">
+    <div style="flex: 1; min-width: 250px;">
+        <h4 style="margin: 0; color: {status_color}; display: flex; align-items: center; word-break: break-word;">
+            <span style="margin-right: 10px;">{status_icon}</span> {status_text}
         </h4>
     </div>
-    <div style="text-align: right; min-width: 120px;">
+    <div class="status-card-metric" style="text-align: right; min-width: 120px;">
         <div style="font-size: 0.9em; color: #B39EB5;">Yield vs Target</div>
         <div style="font-size: 1.5em; font-weight: bold; color: {'#77DD77' if yield_achievement >= 100 else '#779ECB'};">{yield_achievement:.1f}%</div>
     </div>
-    <div style="text-align: right; padding-left: 20px; border-left: 1px solid #333; min-width: 140px;">
+    <div class="status-card-metric" style="text-align: right; padding-left: 20px; border-left: 1px solid #333; min-width: 140px;">
         <div style="font-size: 0.9em; color: #B39EB5;">Overall Quality Score</div>
         <div style="font-size: 1.5em; font-weight: bold; color: {quality_color};">{quality_score:.1f}%</div>
     </div>
