@@ -398,7 +398,7 @@ with r1c2:
         t3.markdown("""
         While mammalian apoptosis is biologically exponential, using it as a control signal causes critical hardware failures:
         Exponential feedback creates steep derivative slopes. PID controllers (e.g., DeltaV) violently overcompensate gas flow and chilling jackets.
-        This "controller panic" triggers aggressive impeller agitation. The resulting **hydrodynamic shear stress** physically shreds EV lipid bilayers and ruins cargo integrity ([Thompson & Papoutsakis, 2023](https://doi.org/10.1016/j.biotechadv.2023.108158)).
+        This "controller panic" triggers aggressive impeller agitation. The resulting hydrodynamic shear stress physically shreds EV lipid bilayers and ruins cargo integrity ([Thompson & Papoutsakis, 2023](https://doi.org/10.1016/j.biotechadv.2023.108158)).
         A linear baseline dampens the controller's derivative, ensuring smooth agitation and preserving the EVs.
         
         
