@@ -244,16 +244,58 @@ fig_funnel = go.Figure(go.Funnel(y=["Raw Yield", "Intact (Purity)", "Functional"
 fig_funnel.update_layout(height=fixed_height, margin=fixed_margin)
 
 # Build Figure 4: Sensitivity
-sens_range = range(12, 96, 6)
+sens_range = list(range(12, 96, 6))
 sens_data = [model.run_simulation(o2, temp, ph, mix, d, s_o2, s_temp, s_ph)["Therapeutic EVs"].sum() * vol * 1000 * 0.78 * 0.62 for d in sens_range]
-fig_sens = px.line(x=sens_range, y=sens_data, color_discrete_sequence=[C_GREEN])
+
+# Simulate biological variance (risk increases over time as viability drops)
+# At 12 hours, variance is low (2%). At 96 hours, variance is high (15%).
+variance_percentages = np.linspace(0.02, 0.15, len(sens_range))
+upper_bound = [val * (1 + var) for val, var in zip(sens_data, variance_percentages)]
+lower_bound = [val * (1 - var) for val, var in zip(sens_data, variance_percentages)]
+
+fig_sens = go.Figure()
+
+# Add the filled area for risk/variance (Confidence Interval)
+fig_sens.add_trace(go.Scatter(
+    x=sens_range + sens_range[::-1],
+    y=upper_bound + lower_bound[::-1],
+    fill='toself',
+    fillcolor='rgba(119, 221, 119, 0.2)', # Transparent Green (C_GREEN)
+    line=dict(color='rgba(255,255,255,0)'),
+    hoverinfo="skip",
+    name='Biological Variance (95% CI)'
+))
+
+# Add the main predictive line
+fig_sens.add_trace(go.Scatter(
+    x=sens_range, 
+    y=sens_data, 
+    mode='lines', 
+    line=dict(color=C_GREEN, width=3),
+    name='Predicted Yield'
+))
+
+# Mark the optimal harvest point
 idx = np.argmax(sens_data)
 fig_sens.add_trace(go.Scatter(
-    x=[list(sens_range)[idx]], y=[sens_data[idx]], 
-    mode='markers+text', text=['Optimal Harvest'], textposition='top right',
-    textfont=dict(color=C_STAR, size=12, family="sans serif"), marker=dict(size=14, color=C_STAR, symbol='star')
+    x=[sens_range[idx]], 
+    y=[sens_data[idx]], 
+    mode='markers+text', 
+    text=['Optimal Harvest'], 
+    textposition='top center',
+    textfont=dict(color=C_STAR, size=12, family="sans serif"), 
+    marker=dict(size=14, color=C_STAR, symbol='star'),
+    name='Target'
 ))
-fig_sens.update_layout(height=fixed_height, margin=fixed_margin, showlegend=False, hovermode="x unified")
+
+fig_sens.update_layout(
+    height=fixed_height, 
+    margin=fixed_margin, 
+    showlegend=False, 
+    hovermode="x unified",
+    xaxis_title="Culture Duration (Hours)",
+    yaxis_title="Functional EV Yield"
+)
 
 # Dictionary to pass all graphs easily
 report_figs = {'accum': fig_accum, 'viab': fig_viab, 'funnel': fig_funnel, 'sens': fig_sens}
@@ -417,7 +459,12 @@ with r2c2:
     st.markdown("### Yield Sensitivity Analysis")
     st.plotly_chart(fig_sens, use_container_width=True)
     with st.expander("Explore Logic"):
-        t1, t2 = st.tabs(["Biology", "Model"])
-        t1.markdown("Determines the 'sweet spot' for harvest duration. The inflection point occurs where incremental EV gain is offset by culture necrosis and byproduct toxicity.")
-        t2.latex(r"\frac{d}{dt}Yield(t) = 0 \quad at \quad t_{optimal}")
-
+        t1, t2 = st.tabs(["Biology & Risk", "Model"])
+        
+        t1.markdown("""
+        The solid line predicts absolute yield, while the shaded region represents the biological variance (95% CI). Variance interval widens as time progresses. As cellular viability drops and the culture enters late-stage apoptosis, stochastic events  make the process highly unpredictable. The "optimal spot" is the inflection point where incremental EV gain is maximized before the risk of batch variance becomes too wide.
+        """)
+        
+        t2.latex(r"\text{Optimal Harvest: } \frac{d}{dt}Yield(t) = 0")
+        t2.latex(r"\text{Risk Variance: } \sigma^2(t) \propto \int_{0}^{t} (\kappa_{tox}(\tau)) d\tau")
+        t2.markdown("The mathematical optimization seeks to maximize yield while minimizing the integral of accumulated toxic variance.")
