@@ -484,7 +484,6 @@ c2.metric("Final Substrate", f"{final_substrate:.2f} g/L")
 c3.metric("Final Volume", f"{final_vol:.2f} L")
 st.plotly_chart(fig_monod, use_container_width=True)
 
-
 # --- 11. ANALYTICS GRID ---
 st.divider()
 st.subheader("Analytics")
@@ -493,10 +492,11 @@ r2c1, r2c2 = st.columns(2)
 
 with r1c1:
     st.markdown("### Process Accumulation")
+    # Using the pre-built figure from Section 8
     st.plotly_chart(fig_accum, use_container_width=True)
     with st.expander("Explore Logic"):
         t1, t2 = st.tabs(["Biology", "Model"])
-        t1.markdown("This graph tracks therapeutic accumulation versus impurity buildup. The harvest window is constrained by the impurity crossover point.")
+        t1.markdown("This graph tracks therapeutic accumulation versus impurity buildup. The harvest window is constrained by the impurity crossover point. Harvesting before this ensures optimal purity levels.")
         t2.latex(r"\Phi_{total} = \Phi_{Therapeutic} + \Phi_{Stress} + \Phi_{Apoptotic}")
 
 with r1c2:
@@ -504,17 +504,29 @@ with r1c2:
     st.plotly_chart(fig_viab, use_container_width=True)
     with st.expander("Explore Logic"):
         t1, t2, t3 = st.tabs(["Biology", "Model", "Exponential"])
-        t1.markdown("Viability decline signifies the transition from growth to the apoptotic phase. The 'Death Cliff' marker identifies when cell repair mechanisms collapse.")
+        
+        t1.markdown("Viability decline signifies the transition from growth to the apoptotic phase. The 'Death Cliff' marker identifies when cell repair mechanisms collapse under toxic stress.")
+        
         t2.latex(r"\frac{dV}{dt} = -(\kappa_{tox} + \tau_{shear})")
-        t2.markdown("The model utilizes zero-order linear decay kinetics, computed via a Forward Euler integration step.")
+        t2.markdown("The model utilizes zero-order linear decay kinetics, computed via a Forward Euler integration step, rather than a physiological exponential curve. See Exponential.")
+        
         t3.latex(r"\text{Exponential Rate: } \frac{dV}{dt} = -k_d V \implies V(t) = V_0 e^{-k_d t}")
+        t3.markdown("""
+        While mammalian apoptosis is biologically exponential, using it as a control signal causes critical hardware failures:
+        Exponential feedback creates steep derivative slopes. PID controllers (e.g., DeltaV) violently overcompensate gas flow and chilling jackets.
+        This "controller panic" triggers aggressive impeller agitation. The resulting hydrodynamic shear stress physically shreds EV lipid bilayers and ruins cargo integrity ([Thompson & Papoutsakis, 2023](https://doi.org/10.1016/j.biotechadv.2023.108158)).
+        A linear baseline dampens the controller's derivative, ensuring smooth agitation and preserving the EVs.
+        
+        
+        By keeping the foundational physics computationally safe, future Neural Networks can be trained on errors and patterns.
+        """)
 
 with r2c1:
     st.markdown("### Yield-to-Value Bridge")
     st.plotly_chart(fig_funnel, use_container_width=True)
     with st.expander("Explore Logic"):
         t1, t2 = st.tabs(["Biology", "Model"])
-        t1.markdown("This funnel visualizes the mass balance across downstream stages. Narrowing segments highlight cumulative yield loss during purification.")
+        t1.markdown("This funnel visualizes the mass balance across downstream stages. Narrowing segments highlight cumulative yield loss during purification. It serves as a diagnostic for loading/recovery efficiency.")
         t2.latex(r"V_{final} = Yield_{raw} \cdot \eta_{purity} \cdot \phi_{consistency}")
 
 with r2c2:
@@ -522,6 +534,14 @@ with r2c2:
     st.plotly_chart(fig_sens, use_container_width=True)
     with st.expander("Explore Logic"):
         t1, t2 = st.tabs(["Biology", "Model"])
-        t1.markdown("The solid line predicts absolute yield, while the shaded region represents the biological variance (95% CI).")
+        
+        t1.markdown("""
+        The solid line predicts absolute yield, while the shaded region represents the biological variance (95% CI). Variance interval widens as time progresses. As cellular viability drops and the culture enters late-stage apoptosis, stochastic events  make the process highly unpredictable. The "optimal spot" is the inflection point where incremental EV gain is maximized before the risk of batch variance becomes too wide.
+        """)
+        
         t2.latex(r"\text{Optimal Harvest: } \frac{d}{dt}Yield(t) = 0")
         t2.latex(r"\text{Risk Variance: } \sigma^2(t) \propto \int_{0}^{t} (\kappa_{tox}(\tau)) d\tau")
+        t2.markdown("The mathematical optimization seeks to maximize yield while minimizing the integral of accumulated toxic variance.")
+
+
+
