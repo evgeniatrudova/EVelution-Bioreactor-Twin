@@ -1,6 +1,6 @@
 # ==============================================================================
 # FED-BATCH BIOREACTOR OPTIMISATION FOR EV YIELD PRODUCTION
-# Based on the Multi-Machinery Model of Biogenesis
+# Based on the Multi-Machinery Model of Biogenesis & Monod Mass Balance
 #
 # Author / Lead Software Engineer: Evgenia Trudova
 # Academic Origin: Swedish University of Agricultural Sciences (SLU), 2026
@@ -21,7 +21,6 @@ import io
 st.set_page_config(page_title="EVelution Bioreactor Twin", layout="wide", initial_sidebar_state="auto")
 
 # --- 2. CSS INJECTION ---
-# Keep all CSS here, strictly separate from your Python logic
 st.markdown("""
 <style>
     /* Blue-centric theme enforcement */
@@ -32,7 +31,7 @@ st.markdown("""
     
     /* UX FIX: Force disabled buttons to remain highly visible */
     .stButton > button[disabled] {
-        opacity: 0.85 !important;           
+        opacity: 0.85 !important;            
         border: 1px solid #4B4B60 !important; 
         color: #B39EB5 !important;          
         background-color: transparent !important;
@@ -68,7 +67,6 @@ st.markdown("""
     
 # --- 2. GLOBAL CONSTANTS ---
 fixed_height = 400
-# MOBILE FIX: Reduced side margins from 20 to 10 to prevent clipping
 fixed_margin = dict(t=40, b=10, l=10, r=10)
 C_GREEN, C_BLUE, C_PURPLE, C_STAR = "#77DD77", "#779ECB", "#B39EB5", "#E39777"
 
@@ -95,6 +93,40 @@ class FedBatchBioreactorModel:
     def __init__(self): 
         self.base_rate = 1.2e9
     
+    # NEW: Monod Mass Balance Euler Integration
+    def run_mass_balance(self, init_vol, s_0, f_in, s_in, mu_max, o2, temp, ph, dur):
+        X = 0.5  # Initial Biomass (g/L)
+        S = s_0  # Initial Substrate (g/L)
+        V = init_vol # Initial Volume (L)
+        Ks = 0.1
+        Yxs = 0.5
+        
+        history = {"Hour": [], "Biomass (g/L)": [], "Substrate (g/L)": [], "Volume (L)": []}
+        
+        # Calculate dynamic environmental stress modifiers
+        E_o2 = min(1.0, (o2 / (2.0 + o2)) * 1.1)
+        E_temp = np.exp(-((temp - 37.0)**2) / (4.0 if temp > 37.0 else 25.0))
+        E_ph = np.exp(-((ph - 7.4)**2) / 0.4)
+        
+        for hour in range(1, dur + 1):
+            dt = 1.0 / 100.0  # 100 integration steps per hour for Euler stability
+            for _ in range(100):
+                mu = mu_max * E_o2 * E_temp * E_ph * (S / (Ks + S)) if S > 0 else 0
+                dV = f_in * dt
+                dX = (mu * X - (f_in / V) * X) * dt if V > 0 else 0
+                dS = (-(mu * X) / Yxs + (f_in / V) * (s_in - S)) * dt if V > 0 else 0
+                
+                V += dV
+                X = max(0.0, X + dX)
+                S = max(0.0, S + dS)
+                
+            history["Hour"].append(hour)
+            history["Biomass (g/L)"].append(X)
+            history["Substrate (g/L)"].append(S)
+            history["Volume (L)"].append(V)
+            
+        return pd.DataFrame(history)
+
     def run_simulation(self, init_o2, target_temp, target_ph, mixing_homogeneity, duration_hours, s_o2, s_temp, s_ph):
         viability = 100.0
         history = {"Hour": [], "Therapeutic EVs": [], "Stress-Altered EVs": [], "Apoptotic Impurities": [], "Cell Viability (%)": []}
@@ -109,12 +141,10 @@ class FedBatchBioreactorModel:
             history["Cell Viability (%)"].append(viability)
         return pd.DataFrame(history)
 
-# --- 4. ADVANCED PDF GENERATOR (Text & Data Only) ---
+# --- 4. ADVANCED PDF GENERATOR ---
 def generate_qms_pdf(cell_line, vol, dur, target, yield_val, purity, consistency, q_score):
     pdf = FPDF()
     pdf.add_page()
-    
-    # --- PAGE 1: EXECUTIVE SUMMARY ---
     pdf.set_font("Helvetica", "B", 16)
     pdf.set_text_color(119, 158, 203) 
     pdf.cell(0, 10, "EVelution-bio: Digital Twin Projection Report", ln=True)
@@ -129,7 +159,7 @@ def generate_qms_pdf(cell_line, vol, dur, target, yield_val, purity, consistency
     pdf.cell(0, 10, "1. Bioreactor Configuration", ln=True)
     pdf.set_font("Helvetica", "", 11)
     pdf.cell(0, 8, f"Host Cell Line: {cell_line}", ln=True)
-    pdf.cell(0, 8, f"Working Volume: {vol} L", ln=True)
+    pdf.cell(0, 8, f"Final Working Volume: {vol:.2f} L", ln=True)
     pdf.cell(0, 8, f"Culture Duration: {dur} Hours", ln=True)
     pdf.ln(5)
     
@@ -144,7 +174,6 @@ def generate_qms_pdf(cell_line, vol, dur, target, yield_val, purity, consistency
     
     pdf.set_font("Helvetica", "B", 12)
     pdf.cell(0, 10, "3. Quality Assurance Evaluation", ln=True)
-    
     if (yield_val/target)*100 >= 100 and q_score >= 60.0:
         pdf.set_text_color(34, 139, 34)
         status = "OPTIMAL: Target reached with high-purity harvest. Cleared for scale-up."
@@ -157,7 +186,6 @@ def generate_qms_pdf(cell_line, vol, dur, target, yield_val, purity, consistency
         
     pdf.set_font("Helvetica", "B", 11)
     pdf.cell(0, 10, f"STATUS: {status}", ln=True)
-    
     return bytes(pdf.output())
     
 # --- 5. APP UI HEADER ---
@@ -170,37 +198,27 @@ st.markdown("""
 
 with st.expander("Explore Logic", expanded=False):
     tab_bio, tab_math = st.tabs(["Biology", "Model"])
-    
     with tab_bio:
         st.markdown("""
         **Metrics**
         * **Yield Performance**: Total therapeutic EV quantity projected post-DSP. Calculated by integrating hourly production flux ($\Phi$) over the culture duration, scaled by volume.
-        * **Harvest Concentration**: Instantaneous density of EVs in the bioreactor at the moment of harvest ($\Phi_{final}$). Dictates the upstream input load for downstream purification.
+        * **Harvest Concentration**: Instantaneous density of EVs in the bioreactor at the moment of harvest ($\Phi_{final}$).
         * **Downstream Purity**: Represents the success rate of the purification workflow (TFF/Chromatography). Modeled as a recovery coefficient ($\eta_{purity}$).
         * **Cargo Consistency**: Quality index denoting the percentage of EVs that contain the active therapeutic payload ($\phi_{consistency}$).
         
-        **Biogenesis Triggers (BiogenesisEngine.calc_flux`)**
+        **Biogenesis Triggers & Kinetics**
+        * **Growth (Monod)**: Mass balance ODEs tracking substrate conversion into biomass, structurally penalized by stress conditions.
         * **Hypoxia**: Modeled as an evolutionary panic response to oxygen deprivation using an inverted Hill equation.
-        * **Temperature**: Uses the Arrhenius equation coupled with a quadratic heat-shock modifier to simulate thermodynamic acceleration of biogenesis.
-        * **pH**: Modeled via Gibbs Free Energy thermodynamics combined with an empirical inhibition scalar for proton concentration shifts.
+        * **Temperature**: Uses the Arrhenius equation coupled with a quadratic heat-shock modifier.
+        * **pH**: Modeled via Gibbs Free Energy thermodynamics combined with an empirical inhibition scalar.
         """)
-        
     with tab_math:
-        st.markdown("Metrics")
-        st.latex(r" \text{Yield Performance: } Y_{perf} = \left( \sum_{t=1}^{T} \Phi(t) \cdot V_{react} \right) \cdot \eta_{purity} \cdot \phi_{consistency}")
-        st.latex(r" \text{Harvest Conc: } \Phi_{final} = \Phi(t_{harvest})")
-        st.latex(r" \text{Purity: } \eta_{purity} = \frac{EV_{purified}}{EV_{crude}} \quad \text{Consistency: } \phi_{consistency} = \frac{EV_{loaded}}{EV_{total}}")
-        
-        st.divider()
-        
-        st.markdown("Biogenesis")
-        st.latex(r" \text{Hypoxia (Hill): } \lambda_{hyp} = \frac{K^n + x_0^n}{K^n + O_2^n}")
+        st.markdown("Biogenesis & Mass Balance")
+        st.latex(r" \text{Monod Growth: } \mu = \mu_{max} \cdot E_{O2} \cdot E_{temp} \cdot E_{pH} \cdot \frac{S}{K_s + S}")
+        st.latex(r" \text{Biomass: } \frac{dX}{dt} = \mu X - \frac{F_{in}}{V} X \quad \text{Substrate: } \frac{dS}{dt} = -\frac{\mu X}{Y_{xs}} + \frac{F_{in}}{V}(S_{in} - S)")
         st.latex(r" \text{Thermal (Arrhenius + Shock): } S_{temp} = A_0 e^{-\frac{E_a}{R}\left(\frac{1}{T} - \frac{1}{T_0}\right)} \cdot \left( 1 + \frac{(T - 37)^2}{1^2 + (T - 37)^2} \right)")
-        st.latex(r" \text{pH (Gibbs + Inhibition): } S_{pH} = e^{-\frac{2.303 RT (pH - pH_0)}{RT}} \cdot \left( 1 + \frac{0.5 \left(\frac{[H^+]}{[H^+]_0}\right)^2}{0.1^2 + \left(\frac{[H^+]}{[H^+]_0}\right)^2} \right)")
-        
         st.markdown("**Total Hourly Production Flux:**")
         st.latex(r" \Phi(t) = \Phi_{base} \cdot \lambda_{hyp}^{s_{o2}} \cdot S_{temp}^{s_{temp}} \cdot S_{pH}^{s_{ph}}")
-
 
 # --- 6. CELL LINE DATABASE ---
 cell_line_db = {
@@ -213,17 +231,24 @@ cell_line_db = {
 # --- 7. SIDEBAR INPUTS ---
 with st.sidebar:
     st.header("Cell Line")
-    selected_cell = st.selectbox("Select Host Cell Line", list(cell_line_db.keys()), help="Loads validated empirical kinetic parameters.")
+    selected_cell = st.selectbox("Select Host Cell Line", list(cell_line_db.keys()))
     defaults = cell_line_db[selected_cell]
     
     manual_override = st.toggle("Enable Manual Input (DoE Override)")
-    s_o2 = st.number_input("Hypoxia Modifier (Ks scalar)", min_value=0.0, max_value=3.0, value=defaults["hypoxia"], step=0.05, disabled=not manual_override)
-    s_temp = st.number_input("Thermal Modifier (Ea scalar)", min_value=0.0, max_value=3.0, value=defaults["thermal"], step=0.05, disabled=not manual_override)
-    s_ph = st.number_input("pH Modifier (Inhibition scalar)", min_value=0.0, max_value=3.0, value=defaults["ph"], step=0.05, disabled=not manual_override)
+    s_o2 = st.number_input("Hypoxia Modifier", min_value=0.0, max_value=3.0, value=defaults["hypoxia"], step=0.05, disabled=not manual_override)
+    s_temp = st.number_input("Thermal Modifier", min_value=0.0, max_value=3.0, value=defaults["thermal"], step=0.05, disabled=not manual_override)
+    s_ph = st.number_input("pH Modifier", min_value=0.0, max_value=3.0, value=defaults["ph"], step=0.05, disabled=not manual_override)
     
     st.divider()
-    st.header("Experimental")
-    vol = st.number_input("Volume (L)", value=50.0)
+    st.header("Metabolism & Feeding")
+    s_0 = st.number_input("Initial Substrate (g/L)", value=10.0, step=1.0)
+    f_in = st.slider("Feed Rate (L/h)", 0.0, 5.0, 0.0, step=0.1)
+    s_in = st.number_input("Feed Concentration (g/L)", value=100.0, step=10.0)
+    mu_max = st.slider("Max Growth Rate (1/h)", 0.05, 0.50, 0.17, step=0.01)
+
+    st.divider()
+    st.header("Environmental Stress")
+    vol = st.number_input("Initial Volume (L)", value=50.0)
     o2 = st.slider("Oxygen (%)", 0, 21, 21)
     temp = st.slider("Temp (°C)", 30, 45, 37)
     ph = st.slider("pH", 6.0, 8.0, 7.4)
@@ -232,9 +257,7 @@ with st.sidebar:
     
     st.divider()
     st.header("Yield Target")
-    st.caption("Set target load for downstream processing:")
     t_col1, t_col2 = st.columns(2)
-    
     with t_col1:
         target_base = st.number_input("Base", min_value=1.0, max_value=9.9, value=1.0, step=0.1)
     with t_col2:
@@ -243,10 +266,17 @@ with st.sidebar:
     target = target_base * (10 ** target_exp)
     st.markdown(f"<div style='text-align: right; color: #77DD77; font-size: 0.9em;'><b>Active Target: {target:.1e} EVs</b></div>", unsafe_allow_html=True)
 
-
 # --- 8. RUN SIMULATION & GENERATE GRAPHS ---
 model = FedBatchBioreactorModel()
+
+# Run EV simulation
 df = model.run_simulation(o2, temp, ph, mix, dur, s_o2, s_temp, s_ph)
+
+# NEW: Run Mass Balance integration
+mb_df = model.run_mass_balance(vol, s_0, f_in, s_in, mu_max, o2, temp, ph, dur)
+final_biomass = mb_df["Biomass (g/L)"].iloc[-1]
+final_substrate = mb_df["Substrate (g/L)"].iloc[-1]
+final_vol = mb_df["Volume (L)"].iloc[-1]
 
 avg_viability = df["Cell Viability (%)"].mean() / 100.0
 impurity_ratio = df["Apoptotic Impurities"].iloc[-1] / (df["Therapeutic EVs"].iloc[-1] + 1e-9)
@@ -255,9 +285,17 @@ dynamic_purity = max(0.2, 0.78 * (1.0 / (1.0 + (impurity_ratio * 0.05))))
 dynamic_consistency = max(0.3, 0.62 * (avg_viability ** 0.5)) 
 
 total_prod = df["Therapeutic EVs"].sum()
-true_val = total_prod * vol * 1000 * dynamic_purity * dynamic_consistency
+# Updated true_val to link to the dynamic Final Volume calculated by the Mass Balance ODE
+true_val = total_prod * final_vol * 1000 * dynamic_purity * dynamic_consistency
 yield_achievement = (true_val / target) * 100
 quality_score = (dynamic_purity * dynamic_consistency) * 100 
+
+# Build Figure 0: NEW Monod Mass Balance
+fig_monod = go.Figure()
+fig_monod.add_trace(go.Scatter(x=mb_df["Hour"], y=mb_df["Biomass (g/L)"], mode='lines', name='Biomass (g/L)', line=dict(color=C_BLUE, width=3)))
+fig_monod.add_trace(go.Scatter(x=mb_df["Hour"], y=mb_df["Substrate (g/L)"], mode='lines', name='Substrate (g/L)', line=dict(color=C_GREEN, width=3)))
+fig_monod.add_trace(go.Scatter(x=mb_df["Hour"], y=mb_df["Volume (L)"], mode='lines', name='Volume (L)', line=dict(color=C_STAR, width=3)))
+fig_monod.update_layout(height=400, margin=fixed_margin, hovermode="x unified", legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
 
 # Build Figure 1: Accumulation
 fig_accum = px.line(df, x="Hour", y=["Therapeutic EVs", "Stress-Altered EVs", "Apoptotic Impurities"], log_y=True,
@@ -270,7 +308,6 @@ if 'historical_df' in st.session_state and st.session_state['historical_df'] is 
             mode='lines', name='Golden Batch Benchmark',
             line=dict(color='rgba(227, 82, 82, 0.7)', width=3, dash='dash')
         ))
-# MOBILE FIX: Repositioned legend horizontally so it doesn't crush the graph on phones
 fig_accum.update_layout(height=fixed_height, margin=fixed_margin, hovermode="x unified", legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
 
 # Build Figure 2: Viability
@@ -290,28 +327,23 @@ fig_funnel.update_layout(height=fixed_height, margin=fixed_margin)
 
 # Build Figure 4: Sensitivity
 sens_range = list(range(12, 96, 6))
-sens_data = [model.run_simulation(o2, temp, ph, mix, d, s_o2, s_temp, s_ph)["Therapeutic EVs"].sum() * vol * 1000 * 0.78 * 0.62 for d in sens_range]
+# Apply final_vol scalar to sensitivity plot logic
+sens_data = [model.run_simulation(o2, temp, ph, mix, d, s_o2, s_temp, s_ph)["Therapeutic EVs"].sum() * final_vol * 1000 * 0.78 * 0.62 for d in sens_range]
 
-# Simulate biological variance (risk increases over time as viability drops)
-# At 12 hours, variance is low (2%). At 96 hours, variance is high (15%).
 variance_percentages = np.linspace(0.02, 0.15, len(sens_range))
 upper_bound = [val * (1 + var) for val, var in zip(sens_data, variance_percentages)]
 lower_bound = [val * (1 - var) for val, var in zip(sens_data, variance_percentages)]
 
 fig_sens = go.Figure()
-
-# Add the filled area for risk/variance (Confidence Interval)
 fig_sens.add_trace(go.Scatter(
     x=sens_range + sens_range[::-1],
     y=upper_bound + lower_bound[::-1],
     fill='toself',
-    fillcolor='rgba(119, 221, 119, 0.2)', # Transparent Green (C_GREEN)
+    fillcolor='rgba(119, 221, 119, 0.2)',
     line=dict(color='rgba(255,255,255,0)'),
     hoverinfo="skip",
     name='Biological Variance (95% CI)'
 ))
-
-# Add the main predictive line
 fig_sens.add_trace(go.Scatter(
     x=sens_range, 
     y=sens_data, 
@@ -319,8 +351,6 @@ fig_sens.add_trace(go.Scatter(
     line=dict(color=C_GREEN, width=3),
     name='Predicted Yield'
 ))
-
-# Mark the optimal harvest point
 idx = np.argmax(sens_data)
 fig_sens.add_trace(go.Scatter(
     x=[sens_range[idx]], 
@@ -332,7 +362,6 @@ fig_sens.add_trace(go.Scatter(
     marker=dict(size=14, color=C_STAR, symbol='star'),
     name='Target'
 ))
-
 fig_sens.update_layout(
     height=fixed_height, 
     margin=fixed_margin, 
@@ -342,18 +371,13 @@ fig_sens.update_layout(
     yaxis_title="Functional EV Yield"
 )
 
-# Dictionary to pass all graphs easily
-report_figs = {'accum': fig_accum, 'viab': fig_viab, 'funnel': fig_funnel, 'sens': fig_sens}
-
-
 # --- 9. SIDEBAR DATA EXPORT ---
 with st.sidebar:
     st.divider()
     st.header("Data & Benchmarking")
     
-    st.markdown("**Export Current Simulation**")
     pdf_bytes = generate_qms_pdf(
-        cell_line=selected_cell, vol=vol, dur=dur, target=target,
+        cell_line=selected_cell, vol=final_vol, dur=dur, target=target,
         yield_val=true_val, purity=dynamic_purity, consistency=dynamic_consistency, q_score=quality_score
     )
     
@@ -366,9 +390,7 @@ with st.sidebar:
     )
     
     st.markdown("<br>", unsafe_allow_html=True)
-    
     st.markdown("**Historical Benchmarking**")
-    st.info("Drop a CSV of your best historical run here. The engine will project it as a dashed 'ghost line' on your main graph so you can optimize against it in real-time.")
     
     uploaded_file = st.file_uploader(
         "Upload History File (.csv)", 
@@ -391,14 +413,12 @@ with st.sidebar:
             del st.session_state['csv_uploader']
         st.rerun()
 
-    # MOBILE FIX: Added class="legal-disclaimer" here to trigger mobile text wrapping
     st.markdown("""
     <div class="legal-disclaimer" style="font-size: 0.75em; color: #808080; margin-top: 20px; padding-top: 15px; border-top: 1px solid #333; line-height: 1.4; text-align: justify;">
         <b>DATA GOVERNANCE AND LIABILITY DISCLAIMER</b><br>
         Data uploaded to this application is processed strictly in volatile memory (RAM) for ephemeral visualization. The architecture contains no persistent storage, logging, or external transmission protocols. By utilizing this software, end-users assume absolute liability for the safeguarding of proprietary technical trade secrets, in compliance with the Swedish Trade Secrets Act (SFS 2018:558, as amended 2026), the EU Trade Secrets Directive (2016/943), and the US Defend Trade Secrets Act (DTSA). Furthermore, operations align with global electronic record frameworks (FDA 21 CFR Part 11, EMA Annex 11) and international data sovereignty laws (GDPR) via zero-retention processing. Under international safe harbor and ephemeral data processing doctrines, this application acts purely as a localized execution environment, legally exempting the provider from data hosting, processor, and controller liabilities. Users are legally obligated to execute the internal data purge protocol upon session termination.
     </div>
     """, unsafe_allow_html=True)
-
 
 # --- 10. METRICS & BATCH EVALUATION ---
 m1, m2, m3, m4 = st.columns(4)
@@ -412,7 +432,7 @@ st.markdown("### Batch Success Evaluation")
 is_startup = (
     selected_cell == "Human MSCs (Bone Marrow)" and
     vol == 50.0 and o2 == 21 and temp == 37 and ph == 7.4 and mix == 85 and dur == 48 and
-    target_base == 1.0 and target_exp == 15 and not manual_override
+    target_base == 1.0 and target_exp == 15 and not manual_override and f_in == 0.0
 )
 
 if is_startup:
@@ -437,7 +457,6 @@ else:
     status_icon = "🛑"
     status_text = "DEFICIENT: Target volume not reached. Extend duration or adjust feeding."
 
-# MOBILE FIX: Added flex-wrap and status-card classes so this grid stacks on small screens
 st.markdown(f"""
 <div class="status-card" style="background-color: #1E1E2E; padding: 20px; border-radius: 8px; border-left: 6px solid {status_color}; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px;">
     <div style="flex: 1; min-width: 250px;">
@@ -456,6 +475,15 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
+# --- 10.5. NEW FED-BATCH MASS BALANCE VISUALIZATION ---
+st.divider()
+st.subheader("Upstream Kinetics (Fed-Batch Mass Balance)")
+c1, c2, c3 = st.columns(3)
+c1.metric("Final Biomass", f"{final_biomass:.2f} g/L")
+c2.metric("Final Substrate", f"{final_substrate:.2f} g/L")
+c3.metric("Final Volume", f"{final_vol:.2f} L")
+st.plotly_chart(fig_monod, use_container_width=True)
+
 
 # --- 11. ANALYTICS GRID ---
 st.divider()
@@ -465,11 +493,10 @@ r2c1, r2c2 = st.columns(2)
 
 with r1c1:
     st.markdown("### Process Accumulation")
-    # Using the pre-built figure from Section 8
     st.plotly_chart(fig_accum, use_container_width=True)
     with st.expander("Explore Logic"):
         t1, t2 = st.tabs(["Biology", "Model"])
-        t1.markdown("This graph tracks therapeutic accumulation versus impurity buildup. The harvest window is constrained by the impurity crossover point. Harvesting before this ensures optimal purity levels.")
+        t1.markdown("This graph tracks therapeutic accumulation versus impurity buildup. The harvest window is constrained by the impurity crossover point.")
         t2.latex(r"\Phi_{total} = \Phi_{Therapeutic} + \Phi_{Stress} + \Phi_{Apoptotic}")
 
 with r1c2:
@@ -477,29 +504,17 @@ with r1c2:
     st.plotly_chart(fig_viab, use_container_width=True)
     with st.expander("Explore Logic"):
         t1, t2, t3 = st.tabs(["Biology", "Model", "Exponential"])
-        
-        t1.markdown("Viability decline signifies the transition from growth to the apoptotic phase. The 'Death Cliff' marker identifies when cell repair mechanisms collapse under toxic stress.")
-        
+        t1.markdown("Viability decline signifies the transition from growth to the apoptotic phase. The 'Death Cliff' marker identifies when cell repair mechanisms collapse.")
         t2.latex(r"\frac{dV}{dt} = -(\kappa_{tox} + \tau_{shear})")
-        t2.markdown("The model utilizes zero-order linear decay kinetics, computed via a Forward Euler integration step, rather than a physiological exponential curve. See Exponential.")
-        
+        t2.markdown("The model utilizes zero-order linear decay kinetics, computed via a Forward Euler integration step.")
         t3.latex(r"\text{Exponential Rate: } \frac{dV}{dt} = -k_d V \implies V(t) = V_0 e^{-k_d t}")
-        t3.markdown("""
-        While mammalian apoptosis is biologically exponential, using it as a control signal causes critical hardware failures:
-        Exponential feedback creates steep derivative slopes. PID controllers (e.g., DeltaV) violently overcompensate gas flow and chilling jackets.
-        This "controller panic" triggers aggressive impeller agitation. The resulting hydrodynamic shear stress physically shreds EV lipid bilayers and ruins cargo integrity ([Thompson & Papoutsakis, 2023](https://doi.org/10.1016/j.biotechadv.2023.108158)).
-        A linear baseline dampens the controller's derivative, ensuring smooth agitation and preserving the EVs.
-        
-        
-        By keeping the foundational physics computationally safe, future Neural Networks can be trained on errors and patterns.
-        """)
 
 with r2c1:
     st.markdown("### Yield-to-Value Bridge")
     st.plotly_chart(fig_funnel, use_container_width=True)
     with st.expander("Explore Logic"):
         t1, t2 = st.tabs(["Biology", "Model"])
-        t1.markdown("This funnel visualizes the mass balance across downstream stages. Narrowing segments highlight cumulative yield loss during purification. It serves as a diagnostic for loading/recovery efficiency.")
+        t1.markdown("This funnel visualizes the mass balance across downstream stages. Narrowing segments highlight cumulative yield loss during purification.")
         t2.latex(r"V_{final} = Yield_{raw} \cdot \eta_{purity} \cdot \phi_{consistency}")
 
 with r2c2:
@@ -507,11 +522,6 @@ with r2c2:
     st.plotly_chart(fig_sens, use_container_width=True)
     with st.expander("Explore Logic"):
         t1, t2 = st.tabs(["Biology", "Model"])
-        
-        t1.markdown("""
-        The solid line predicts absolute yield, while the shaded region represents the biological variance (95% CI). Variance interval widens as time progresses. As cellular viability drops and the culture enters late-stage apoptosis, stochastic events  make the process highly unpredictable. The "optimal spot" is the inflection point where incremental EV gain is maximized before the risk of batch variance becomes too wide.
-        """)
-        
+        t1.markdown("The solid line predicts absolute yield, while the shaded region represents the biological variance (95% CI).")
         t2.latex(r"\text{Optimal Harvest: } \frac{d}{dt}Yield(t) = 0")
         t2.latex(r"\text{Risk Variance: } \sigma^2(t) \propto \int_{0}^{t} (\kappa_{tox}(\tau)) d\tau")
-        t2.markdown("The mathematical optimization seeks to maximize yield while minimizing the integral of accumulated toxic variance.")
