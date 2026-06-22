@@ -187,7 +187,7 @@ def generate_qms_pdf(cell_line, vol, dur, target, yield_val, purity, consistency
     pdf.set_font("Helvetica", "B", 11)
     pdf.cell(0, 10, f"STATUS: {status}", ln=True)
     return bytes(pdf.output())
-    
+
 # --- 5. APP UI HEADER ---
 st.title("EVelution Bioreactor Optimisation")
 st.markdown("""
@@ -198,25 +198,34 @@ st.markdown("""
 
 with st.expander("Explore Logic", expanded=False):
     tab_bio, tab_math = st.tabs(["Biology", "Model"])
+    
     with tab_bio:
         st.markdown("""
         **Metrics**
-        * **Yield Performance**: Total therapeutic EV quantity projected post-DSP. Calculated by integrating hourly production flux ($\Phi$) over the culture duration, scaled by volume.
-        * **Harvest Concentration**: Instantaneous density of EVs in the bioreactor at the moment of harvest ($\Phi_{final}$).
-        * **Downstream Purity**: Represents the success rate of the purification workflow (TFF/Chromatography). Modeled as a recovery coefficient ($\eta_{purity}$).
-        * **Cargo Consistency**: Quality index denoting the percentage of EVs that contain the active therapeutic payload ($\phi_{consistency}$).
+        * **Yield Performance**: Total therapeutic EV quantity projected post-DSP. Calculated by integrating hourly production flux (Φ) over the culture duration, scaled by volume.
+        * **Harvest Concentration**: Instantaneous density of EVs in the bioreactor at the moment of harvest (Φ_final). Dictates the upstream input load for downstream purification.
+        * **Downstream Purity**: Represents the success rate of the purification workflow (TFF/Chromatography). Modeled as a recovery coefficient (η_purity).
+        * **Cargo Consistency**: Quality index denoting the percentage of EVs that contain the active therapeutic payload (φ_consistency).
         
-        **Biogenesis Triggers & Kinetics**
-        * **Growth (Monod)**: Mass balance ODEs tracking substrate conversion into biomass, structurally penalized by stress conditions.
+        **Biogenesis Triggers (BiogenesisEngine.calc_flux)**
         * **Hypoxia**: Modeled as an evolutionary panic response to oxygen deprivation using an inverted Hill equation.
-        * **Temperature**: Uses the Arrhenius equation coupled with a quadratic heat-shock modifier.
-        * **pH**: Modeled via Gibbs Free Energy thermodynamics combined with an empirical inhibition scalar.
+        * **Temperature**: Uses the Arrhenius equation coupled with a quadratic heat-shock modifier to simulate thermodynamic acceleration of biogenesis.
+        * **pH**: Modeled via Gibbs Free Energy thermodynamics combined with an empirical inhibition scalar for proton concentration shifts.
         """)
+        
     with tab_math:
-        st.markdown("Biogenesis & Mass Balance")
-        st.latex(r" \text{Monod Growth: } \mu = \mu_{max} \cdot E_{O2} \cdot E_{temp} \cdot E_{pH} \cdot \frac{S}{K_s + S}")
-        st.latex(r" \text{Biomass: } \frac{dX}{dt} = \mu X - \frac{F_{in}}{V} X \quad \text{Substrate: } \frac{dS}{dt} = -\frac{\mu X}{Y_{xs}} + \frac{F_{in}}{V}(S_{in} - S)")
+        st.markdown("Metrics")
+        st.latex(r" \text{Yield Performance: } Y_{perf} = \left( \sum_{t=1}^{T} \Phi(t) \cdot V_{react} \right) \cdot \eta_{purity} \cdot \phi_{consistency}")
+        st.latex(r" \text{Harvest Conc: } \Phi_{final} = \Phi(t_{harvest})")
+        st.latex(r" \text{Purity: } \eta_{purity} = \frac{EV_{purified}}{EV_{crude}} \quad \text{Consistency: } \phi_{consistency} = \frac{EV_{loaded}}{EV_{total}}")
+        
+        st.divider()
+        
+        st.markdown("Biogenesis")
+        st.latex(r" \text{Hypoxia (Hill): } \lambda_{hyp} = \frac{K^n + x_0^n}{K^n + O_2^n}")
         st.latex(r" \text{Thermal (Arrhenius + Shock): } S_{temp} = A_0 e^{-\frac{E_a}{R}\left(\frac{1}{T} - \frac{1}{T_0}\right)} \cdot \left( 1 + \frac{(T - 37)^2}{1^2 + (T - 37)^2} \right)")
+        st.latex(r" \text{pH (Gibbs + Inhibition): } S_{pH} = e^{-\frac{2.303 RT (pH - pH_0)}{RT}} \cdot \left( 1 + \frac{0.5 \left(\frac{[H^+]}{[H^+]_0}\right)^2}{0.1^2 + \left(\frac{[H^+]}{[H^+]_0}\right)^2} \right)")
+        
         st.markdown("**Total Hourly Production Flux:**")
         st.latex(r" \Phi(t) = \Phi_{base} \cdot \lambda_{hyp}^{s_{o2}} \cdot S_{temp}^{s_{temp}} \cdot S_{pH}^{s_{ph}}")
 
