@@ -387,9 +387,23 @@ with r1c2:
     st.markdown("### Cellular Viability")
     st.plotly_chart(fig_viab, use_container_width=True)
     with st.expander("Explore Logic"):
-        t1, t2 = st.tabs(["Biology", "Model"])
-        t1.markdown("Viability decline signifies the transition from growth to apoptotic phase. The 'Death Cliff' marker identifies when cell repair mechanisms collapse under toxic stress.")
+        t1, t2, t3 = st.tabs(["Biology", "Model", "Exponential"])
+        
+        t1.markdown("Viability decline signifies the transition from growth to the apoptotic phase. The 'Death Cliff' marker identifies when cell repair mechanisms collapse under toxic stress.")
+        
         t2.latex(r"\frac{dV}{dt} = -(\kappa_{tox} + \tau_{shear})")
+        t2.markdown("The model utilizes zero-order linear decay kinetics, computed via a Forward Euler integration step, rather than a physiological exponential curve. See Exponential.")
+        
+        t3.latex(r"\text{Exponential Rate: } \frac{dV}{dt} = -k_d V \implies V(t) = V_0 e^{-k_d t}")
+        t3.markdown("""
+        While mammalian apoptosis is biologically exponential, using it as a control signal causes critical hardware failures:
+        Exponential feedback creates steep derivative slopes. PID controllers (e.g., DeltaV) violently overcompensate gas flow and chilling jackets.
+        This "controller panic" triggers aggressive impeller agitation. The resulting **hydrodynamic shear stress** physically shreds EV lipid bilayers and ruins cargo integrity ([Thompson & Papoutsakis, 2023](https://doi.org/10.1016/j.biotechadv.2023.108158)).
+        A linear baseline dampens the controller's derivative, ensuring smooth agitation and preserving the EVs.
+        
+        
+        By keeping the foundational physics computationally safe, future Neural Networks can be trained on errors and patterns.
+        """)
 
 with r2c1:
     st.markdown("### Yield-to-Value Bridge")
