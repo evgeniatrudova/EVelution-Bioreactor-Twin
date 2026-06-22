@@ -459,7 +459,7 @@ with r2c2:
     st.markdown("### Yield Sensitivity Analysis")
     st.plotly_chart(fig_sens, use_container_width=True)
     with st.expander("Explore Logic"):
-        t1, t2 = st.tabs(["Biology & Risk", "Model"])
+        t1, t2 = st.tabs(["Biology", "Model"])
         
         t1.markdown("""
         The solid line predicts absolute yield, while the shaded region represents the biological variance (95% CI). Variance interval widens as time progresses. As cellular viability drops and the culture enters late-stage apoptosis, stochastic events  make the process highly unpredictable. The "optimal spot" is the inflection point where incremental EV gain is maximized before the risk of batch variance becomes too wide.
