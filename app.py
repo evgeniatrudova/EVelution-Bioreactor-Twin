@@ -249,14 +249,14 @@ with st.sidebar:
     s_ph = st.number_input("pH Modifier", min_value=0.0, max_value=3.0, value=defaults["ph"], step=0.05, disabled=not manual_override)
     
     st.divider()
-    st.header("Metabolism & Feeding")
-    s_0 = st.number_input("Initial Substrate (g/L)", value=10.0, step=1.0)
+    st.header("Metabolism ")
+    s_0 = st.number_input("Substrate (g/L)", value=10.0, step=1.0)
     f_in = st.slider("Feed Rate (L/h)", 0.0, 5.0, 0.0, step=0.1)
     s_in = st.number_input("Feed Concentration (g/L)", value=100.0, step=10.0)
     mu_max = st.slider("Max Growth Rate (1/h)", 0.05, 0.50, 0.17, step=0.01)
 
     st.divider()
-    st.header("Environmental Stress")
+    st.header("Experimental")
     vol = st.number_input("Initial Volume (L)", value=50.0)
     o2 = st.slider("Oxygen (%)", 0, 21, 21)
     temp = st.slider("Temp (°C)", 30, 45, 37)
@@ -383,7 +383,7 @@ fig_sens.update_layout(
 # --- 9. SIDEBAR DATA EXPORT ---
 with st.sidebar:
     st.divider()
-    st.header("Data & Benchmarking")
+    st.header("Data")
     
     pdf_bytes = generate_qms_pdf(
         cell_line=selected_cell, vol=final_vol, dur=dur, target=target,
@@ -486,11 +486,11 @@ st.markdown(f"""
 
 # --- 10.5. NEW FED-BATCH MASS BALANCE VISUALIZATION ---
 st.divider()
-st.subheader("Upstream Kinetics (Fed-Batch Mass Balance)")
+st.subheader("Kinetics")
 c1, c2, c3 = st.columns(3)
-c1.metric("Final Biomass", f"{final_biomass:.2f} g/L")
-c2.metric("Final Substrate", f"{final_substrate:.2f} g/L")
-c3.metric("Final Volume", f"{final_vol:.2f} L")
+c1.metric("Biomass", f"{final_biomass:.2f} g/L")
+c2.metric("Substrate", f"{final_substrate:.2f} g/L")
+c3.metric("Volume", f"{final_vol:.2f} L")
 st.plotly_chart(fig_monod, use_container_width=True)
 
 # --- 11. ANALYTICS GRID ---
