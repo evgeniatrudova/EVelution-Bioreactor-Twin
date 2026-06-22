@@ -14,6 +14,8 @@
        width="1000" />
 </a>
 
+<img width="1822" height="842" alt="image" src="https://github.com/user-attachments/assets/6cd17959-ffa4-43db-bf61-37d1d5baa51f" />
+
 EVelution-bio is a predictive bioinformatics and process engineering suite designed to optimize the production of therapeutic extracellular vesicles. By creating a digital twin of the bioreactor environment, EVelution-bio allows bioprocess engineers to move away from expensive, iterative physical trial-and-error, transitioning instead toward predictive bioprocess intelligence.
 
 The "Yield-to-Value" Paradigm
