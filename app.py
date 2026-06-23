@@ -482,23 +482,39 @@ fig_viab.update_layout(height=fixed_height, margin=fixed_margin, showlegend=Fals
 fig_funnel = go.Figure(go.Funnel(y=["Raw Yield", "Intact (Purity)", "Functional"], x=[true_val/(0.78*0.62), true_val/0.62, true_val], textinfo="value+percent previous", marker={"color": [C_BLUE, C_PURPLE, C_GREEN]}))
 fig_funnel.update_layout(height=fixed_height, margin=fixed_margin)
 
-# Build Figure 4: Sensitivity
-sens_range = list(range(12, 96, 6))
-sens_data = []
+# Build Figure 4: Sensitivity (OPTIMIZED WITH CACHING)
 
-# Loop dynamically to ensure Biomass and Volume scale per duration step
-for d in sens_range:
-    temp_mb = model.run_mass_balance(
-    vol, s_0, s_in, mu_max, o2, temp, ph, d,
+@st.cache_data(show_spinner=False)
+def calculate_sensitivity(vol, s_0, s_in, mu_max, o2, temp, ph, mix, s_o2, s_temp, s_ph, 
+                          feed_strategy, f_in_initial, mu_setpoint, dilution_rate, is_chemostat):
+    """
+    Caches the 14-step sensitivity loop. It only recalculates if the user explicitly 
+    changes an upstream bioreactor parameter.
+    """
+    temp_model = FedBatchBioreactorModel()
+    sens_range = list(range(12, 96, 6))
+    sens_data = []
+
+    for d in sens_range:
+        temp_mb = temp_model.run_mass_balance(
+            vol, s_0, s_in, mu_max, o2, temp, ph, d,
+            feed_strategy, f_in_initial, mu_setpoint, dilution_rate, is_chemostat
+        )
+        temp_vol = temp_mb["Volume (L)"].iloc[-1]
+        
+        # Pass the isolated duration's biomass series into the simulation
+        temp_df = temp_model.run_simulation(o2, temp, ph, mix, d, s_o2, s_temp, s_ph, temp_mb["Biomass (g/L)"])
+        
+        step_yield = temp_df["Therapeutic EVs"].sum() * temp_vol * 1000 * 0.78 * 0.62
+        sens_data.append(step_yield)
+        
+    return sens_range, sens_data
+
+# Execute the cached function by passing in all the active UI parameters
+sens_range, sens_data = calculate_sensitivity(
+    vol, s_0, s_in, mu_max, o2, temp, ph, mix, s_o2, s_temp, s_ph, 
     feed_strategy, f_in_initial, mu_setpoint, dilution_rate, is_chemostat
 )
-    temp_vol = temp_mb["Volume (L)"].iloc[-1]
-    
-    # Pass the isolated duration's biomass series into the simulation
-    temp_df = model.run_simulation(o2, temp, ph, mix, d, s_o2, s_temp, s_ph, temp_mb["Biomass (g/L)"])
-    
-    step_yield = temp_df["Therapeutic EVs"].sum() * temp_vol * 1000 * 0.78 * 0.62
-    sens_data.append(step_yield)
 
 variance_percentages = np.linspace(0.02, 0.15, len(sens_range))
 upper_bound = [val * (1 + var) for val, var in zip(sens_data, variance_percentages)]
@@ -553,11 +569,14 @@ with st.sidebar:
         yield_val=true_val, purity=dynamic_purity, consistency=dynamic_consistency, q_score=quality_score
     )
     
-    # DYNAMIC FILENAME: The downloaded file will now be named after the Batch ID (e.g., "EXP-001_EVelution_Projection.pdf")
+    # SANITIZE FILENAME: Prevent OS-level file saving errors if users type illegal characters (/, \, :)
+    safe_batch_name = batch_name.replace("/", "-").replace("\\", "-").replace(":", "-")
+    
+    # DYNAMIC FILENAME: The downloaded file will now be safely named after the Batch ID
     st.download_button(
         label="Download PDF",
         data=pdf_bytes,
-        file_name=f"{batch_name}_EVelution_Projection.pdf", 
+        file_name=f"{safe_batch_name}_EVelution_Projection.pdf", 
         mime="application/pdf",
         use_container_width=True
     )
@@ -595,7 +614,7 @@ with st.sidebar:
         Data uploaded to this application is processed strictly in volatile memory (RAM) for ephemeral visualization. The architecture contains no persistent storage, logging, or external transmission protocols. By utilizing this software, end-users assume absolute liability for the safeguarding of proprietary technical trade secrets, in compliance with the Swedish Trade Secrets Act (SFS 2018:558, as amended 2026), the EU Trade Secrets Directive (2016/943), and the US Defend Trade Secrets Act (DTSA). Furthermore, operations align with global electronic record frameworks (FDA 21 CFR Part 11, EMA Annex 11) and international data sovereignty laws (GDPR) via zero-retention processing. Under international safe harbor and ephemeral data processing doctrines, this application acts purely as a localized execution environment, legally exempting the provider from data hosting, processor, and controller liabilities. Users are legally obligated to execute the internal data purge protocol upon session termination.
     </div>
     """, unsafe_allow_html=True)
-
+    
 # --- 10. METRICS & BATCH EVALUATION ---
 m1, m2, m3, m4 = st.columns(4)
 m1.metric("Yield Performance", f"{true_val:.2e}")
