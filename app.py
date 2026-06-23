@@ -451,15 +451,18 @@ with st.sidebar:
     st.divider()
     st.header("Data")
     
+    # PASS BATCH ID: Ensure the PDF generator uses the batch_name defined in Section 7
     pdf_bytes = generate_qms_pdf(
+        batch_id=batch_name, 
         cell_line=selected_cell, vol=final_vol, dur=dur, target=target,
         yield_val=true_val, purity=dynamic_purity, consistency=dynamic_consistency, q_score=quality_score
     )
     
+    # DYNAMIC FILENAME: The downloaded file will now be named after the Batch ID (e.g., "EXP-001_EVelution_Projection.pdf")
     st.download_button(
         label="Download PDF",
         data=pdf_bytes,
-        file_name="EVelution_Batch_Projection.pdf",
+        file_name=f"{batch_name}_EVelution_Projection.pdf", 
         mime="application/pdf",
         use_container_width=True
     )
@@ -467,10 +470,13 @@ with st.sidebar:
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("**Historical Benchmarking**")
     
+    # UX TEXT: Clear instructions for the user before they upload
+    st.caption("Upload a past batch CSV to instantly overlay your real-world data as a dashed red 'Golden Batch' line on the **Process Accumulation** graph.")
+    
     uploaded_file = st.file_uploader(
         "Upload History File (.csv)", 
         type="csv",
-        help="Upload past batch data to overlay your real-world data as a dashed red batch line on the simulated Process Accumulation graph. The app auto-detects common time and yield columns in English and Swedish (e.g., Hour/Timme, Titer/Utbyte).",
+        help="The app auto-detects common time and yield columns in English and Swedish (e.g., Hour/Timme, Titer/Utbyte).",
         key="csv_uploader"
     )
     
