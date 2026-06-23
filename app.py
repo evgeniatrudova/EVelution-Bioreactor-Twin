@@ -275,10 +275,14 @@ cell_line_db = {
 
 # --- 7. SIDEBAR INPUTS ---
 with st.sidebar:
-    st.header("Cell Line & Batch Info")
+    st.divider()
+    st.header("Batch")
     
     # NEW: Batch Naming
     batch_name = st.text_input("Batch ID", "EXP-001")
+
+    st.divider()
+    st.header("Cell Line")
     
     selected_cell = st.selectbox("Select Host Cell Line", list(cell_line_db.keys()))
     defaults = cell_line_db[selected_cell]
