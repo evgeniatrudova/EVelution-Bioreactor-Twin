@@ -802,6 +802,10 @@ fig_growth.update_layout(
 st.plotly_chart(fig_growth, use_container_width=True)
 
 with st.expander("Explore Theory"):
-    st.markdown("The growth rate ($\mu$) is governed by Monod Kinetics:")
-    st.latex(r"\mu = \mu_{max} \cdot \left( \frac{S}{K_s + S} \right)")
-    st.markdown("As substrate ($S$) is consumed, the growth rate approaches zero, signaling the entry into the stationary phase. In fed-batch processes, maintaining a stable $\mu$ is key to preventing cellular metabolic shift.")
+    t1, t2 = st.tabs(["Biology", "Model"])
+        
+        t1.markdown("""The growth rate ($\mu$) is governed by Monod Kinetics.As substrate ($S$) is consumed, the growth rate approaches zero, signaling the entry into the stationary phase. In fed-batch processes, maintaining a stable $\mu$ is key to preventing cellular metabolic shift.
+        """)
+        t2.latex(r"\mu = \mu_{max} \cdot \left( \frac{S}{K_s + S} \right)")
+        
+
