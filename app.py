@@ -96,23 +96,30 @@ class FedBatchBioreactorModel:
     def __init__(self): 
         self.base_rate = 1.2e9
     
-    # Monod Mass Balance Euler Integration
-    def run_mass_balance(self, init_vol, s_0, s_in, mu_max, o2, temp, ph, dur, feed_strategy, f_in_initial, mu_setpoint, dilution_rate, is_chemostat):
-        import math # Required for exponential growth calculation
+def run_mass_balance(self, init_vol, s_0, s_in, mu_max, o2, temp, ph, dur, feed_strategy, f_in_initial, mu_setpoint, dilution_rate, is_chemostat, feed_type, titrant_molarity):
+        import math 
         
-        # Standard Monod Constants
-        Ks = 0.1
-        Yxs = 0.5
+        # --- DYNAMIC FEED CONSTANTS ---
+        feed_db = {
+            "Glucose (Pure)": {"Ks": 0.1, "Yxs": 0.5},
+            "Molasses (Complex)": {"Ks": 0.4, "Yxs": 0.35} 
+        }
+        Ks = feed_db[feed_type]["Ks"]
+        Yxs = feed_db[feed_type]["Yxs"]
+        
+        # --- TITRATION CONSTANTS ---
+        Y_lac_x = 0.8 # Grams of Lactic acid produced per gram of biomass
+        MW_lactic_acid = 90.08 # g/mol
+        total_lactic_acid_g = 0.0
         
         X, S, V = 0.5, s_0, init_vol
-        history = {"Hour": [], "Biomass (g/L)": [], "Substrate (g/L)": [], "Volume (L)": []}
+        history = {"Hour": [], "Biomass (g/L)": [], "Substrate (g/L)": [], "Volume (L)": [], "Titrant Needed (L)": []}
         
         for hour in range(1, dur + 1):
             dt = 1.0 / 100.0 
             for step in range(100):
                 current_time = hour - 1 + (step * dt)
 
-                # --- DYNAMIC FEEDING LOGIC ---
                 if feed_strategy == "Constant Feed":
                     f_in_current = f_in_initial
                 elif feed_strategy == "Exponential Feed":
@@ -122,32 +129,34 @@ class FedBatchBioreactorModel:
                 else:
                     f_in_current = 0.0
                 
-                # --- CHEMOSTAT OUTFLOW LOGIC ---
                 f_out_current = f_in_current if is_chemostat else 0.0
 
-                # --- MONOD MASS BALANCE KINETICS ---
+                # Kinetics
                 mu = mu_max * (S / (Ks + S)) if S > 0 else 0
                 
-                # Volume changes by Inflow minus Outflow
                 dV = (f_in_current - f_out_current) * dt
-                
-                # Dilution rate (D) is Outflow / Volume
                 D = (f_out_current / V) if V > 0 else 0
                 
-                # Biomass: Growth - Washout - Dilution (from F_in expanding volume)
                 dX = (mu * X - D * X - (f_in_current / V) * X) * dt if V > 0 else 0
-                
-                # Substrate: Inflow - Consumption - Washout - Dilution
                 dS = ((f_in_current / V) * s_in - (mu * X) / Yxs - D * S - (f_in_current / V) * S) * dt if V > 0 else 0
+                
+                # Calculate Lactic Acid accumulation
+                if dX > 0:
+                    total_lactic_acid_g += (dX * V * Y_lac_x)
                 
                 V += dV
                 X = max(0.0, X + dX)
                 S = max(0.0, S + dS)
                 
+            # --- CALCULATE TITRATION ---
+            moles_lactic = total_lactic_acid_g / MW_lactic_acid
+            titrant_vol_L = moles_lactic / titrant_molarity 
+                
             history["Hour"].append(hour)
             history["Biomass (g/L)"].append(X)
             history["Substrate (g/L)"].append(S)
             history["Volume (L)"].append(V)
+            history["Titrant Needed (L)"].append(titrant_vol_L)
             
         return pd.DataFrame(history)
 
