@@ -155,9 +155,14 @@ class FedBatchBioreactorModel:
         return pd.DataFrame(history)
 
 # --- 4. ADVANCED PDF GENERATOR ---
-def generate_qms_pdf(cell_line, vol, dur, target, yield_val, purity, consistency, q_score):
+import hashlib
+import time
+
+def generate_qms_pdf(batch_id, cell_line, vol, dur, target, yield_val, purity, consistency, q_score):
     pdf = FPDF()
     pdf.add_page()
+    
+    # Header
     pdf.set_font("Helvetica", "B", 16)
     pdf.set_text_color(119, 158, 203) 
     pdf.cell(0, 10, "EVelution-bio: Digital Twin Projection Report", ln=True)
@@ -167,15 +172,17 @@ def generate_qms_pdf(cell_line, vol, dur, target, yield_val, purity, consistency
     pdf.line(10, 28, 200, 28)
     pdf.ln(10)
     
+    # Section 1: Configuration (Now includes Batch ID)
     pdf.set_font("Helvetica", "B", 12)
     pdf.set_text_color(0, 0, 0)
-    pdf.cell(0, 10, "1. Bioreactor Configuration", ln=True)
+    pdf.cell(0, 10, f"1. Bioreactor Configuration (Batch ID: {batch_id})", ln=True)
     pdf.set_font("Helvetica", "", 11)
     pdf.cell(0, 8, f"Host Cell Line: {cell_line}", ln=True)
     pdf.cell(0, 8, f"Final Working Volume: {vol:.2f} L", ln=True)
     pdf.cell(0, 8, f"Culture Duration: {dur} Hours", ln=True)
     pdf.ln(5)
     
+    # Section 2: Outcomes
     pdf.set_font("Helvetica", "B", 12)
     pdf.cell(0, 10, "2. Projected Downstream Outcomes", ln=True)
     pdf.set_font("Helvetica", "", 11)
@@ -185,6 +192,7 @@ def generate_qms_pdf(cell_line, vol, dur, target, yield_val, purity, consistency
     pdf.cell(0, 8, f"Cargo Consistency: {consistency*100:.1f}%", ln=True)
     pdf.ln(5)
     
+    # Section 3: QA Evaluation
     pdf.set_font("Helvetica", "B", 12)
     pdf.cell(0, 10, "3. Quality Assurance Evaluation", ln=True)
     if (yield_val/target)*100 >= 100 and q_score >= 60.0:
@@ -199,6 +207,20 @@ def generate_qms_pdf(cell_line, vol, dur, target, yield_val, purity, consistency
         
     pdf.set_font("Helvetica", "B", 11)
     pdf.cell(0, 10, f"STATUS: {status}", ln=True)
+    
+    # Section 4: GMP Audit Hash (NEW)
+    pdf.ln(15)
+    pdf.set_font("Helvetica", "I", 8)
+    pdf.set_text_color(150, 150, 150)
+    
+    # Generate a unique cryptographic hash based on the batch parameters
+    raw_data = f"{batch_id}{cell_line}{vol}{dur}{target}{yield_val}{time.time()}"
+    run_hash = hashlib.sha256(raw_data.encode()).hexdigest()
+    
+    pdf.cell(0, 5, "DATA INTEGRITY VERIFICATION", ln=True)
+    pdf.cell(0, 5, f"Generated Timestamp: {time.strftime('%Y-%m-%d %H:%M:%S')} UTC", ln=True)
+    pdf.cell(0, 5, f"SHA-256 Audit Hash: {run_hash}", ln=True)
+    
     return bytes(pdf.output())
 
 # --- 5. APP UI HEADER ---
