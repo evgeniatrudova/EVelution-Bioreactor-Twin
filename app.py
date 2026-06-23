@@ -322,14 +322,33 @@ fig_monod.update_layout(height=400, margin=fixed_margin, hovermode="x unified", 
 # Build Figure 1: Accumulation
 fig_accum = px.line(df, x="Hour", y=["Therapeutic EVs", "Stress-Altered EVs", "Apoptotic Impurities"], log_y=True,
               color_discrete_map={"Therapeutic EVs": C_GREEN, "Stress-Altered EVs": C_PURPLE, "Apoptotic Impurities": C_BLUE})
+
 if 'historical_df' in st.session_state and st.session_state['historical_df'] is not None:
     hist_df = st.session_state['historical_df']
-    if "Hour" in hist_df.columns and "Therapeutic EVs" in hist_df.columns:
-        fig_accum.add_trace(go.Scatter(
-            x=hist_df["Hour"], y=hist_df["Therapeutic EVs"],
-            mode='lines', name='Golden Batch Benchmark',
-            line=dict(color='rgba(227, 82, 82, 0.7)', width=3, dash='dash')
-        ))
+    
+    # 1. Smart X-axis detection (English & Swedish)
+    time_aliases = ["Hour", "Time", "Time (h)", "Timme", "Tid", "Tid (h)"]
+    # Find the first matching time column, otherwise default to the very first column in the CSV
+    x_col = next((col for col in time_aliases if col in hist_df.columns), hist_df.columns[0])
+    
+    # 2. Smart Y-axis detection (English & Swedish)
+    yield_aliases = [
+        "Therapeutic EVs", "Yield", "Titer", "Concentration", "Total Particles", 
+        "Utbyte", "Koncentration", "Partikelkoncentration", "EV-utbyte"
+    ]
+    # Find the first matching yield column. If none match, grab the first column that isn't the X-axis.
+    available_y_cols = [col for col in hist_df.columns if col != x_col]
+    y_fallback = available_y_cols[0] if available_y_cols else hist_df.columns[0]
+    
+    y_col = next((col for col in yield_aliases if col in hist_df.columns), y_fallback)
+    
+    # Plot the Golden Batch line using the detected columns
+    fig_accum.add_trace(go.Scatter(
+        x=hist_df[x_col], y=hist_df[y_col],
+        mode='lines', name='Golden Batch Benchmark',
+        line=dict(color='rgba(227, 82, 82, 0.7)', width=3, dash='dash')
+    ))
+
 fig_accum.update_layout(height=fixed_height, margin=fixed_margin, hovermode="x unified", legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
 
 # Build Figure 2: Viability
@@ -427,7 +446,7 @@ with st.sidebar:
     uploaded_file = st.file_uploader(
         "Upload History File (.csv)", 
         type="csv",
-        help="Ensure your CSV contains 'Hour' and 'Therapeutic EVs' columns for the graph overlay to function.",
+        help="Upload past batch data. The app auto-detects common time and yield columns in English and Swedish (e.g., Hour/Timme, Titer/Utbyte).",
         key="csv_uploader"
     )
     
