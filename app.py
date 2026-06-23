@@ -106,7 +106,7 @@ class FedBatchBioreactorModel:
         Yxs = feed_db[feed_type]["Yxs"]
         Y_lac_x, MW_lactic_acid, total_lactic_acid_g = 0.8, 90.08, 0.0
         X, S, V = 0.5, s_0, init_vol
-        history = {"Hour": [], "Biomass (g/L)": [], "Substrate (g/L)": [], "Volume (L)": [], "Titrant Needed (L)": []}
+        history = {"Hour": [], "Biomass (g/L)": [], "Substrate (g/L)": [], "Volume (L)": [], "Titrant Needed (L)": [], "Growth Rate (1/h)": [] }
         
         for hour in range(1, dur + 1):
             dt = 1.0 / 100.0 
@@ -133,6 +133,7 @@ class FedBatchBioreactorModel:
             history["Substrate (g/L)"].append(S)
             history["Volume (L)"].append(V)
             history["Titrant Needed (L)"].append(titrant_vol_L)
+            history["Growth Rate (1/h)"].append(mu)
         return pd.DataFrame(history)
 
     def run_simulation(self, init_o2, target_temp, target_ph, mixing_homogeneity, duration_hours, s_o2, s_temp, s_ph, biomass_series, feed_type, titrant_molarity):
