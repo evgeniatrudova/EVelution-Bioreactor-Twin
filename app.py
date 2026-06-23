@@ -357,7 +357,7 @@ with st.sidebar:
     temp = st.slider("Temp (°C)", 4, 60, 37)  # Expanded Temp Range
     ph = st.slider("pH", 6.0, 8.0, 7.4)
     mix = st.slider("Mixing (%)", 50, 100, 85)
-    dur = st.slider("Duration (h)", 12, 72, 48)
+    dur = st.slider("Duration (h)", 24, 336, 240) # Defaults to 10 days
 
     st.divider()
     st.header("Feeding Strategy")
