@@ -657,6 +657,8 @@ with st.sidebar:
     """, unsafe_allow_html=True)
     
 # --- 10. METRICS & BATCH EVALUATION ---
+final_titrant = mb_df["Titrant Needed (L)"].iloc[-1]
+
 m1, m2, m3, m4 = st.columns(4)
 m1.metric("Yield Performance", f"{true_val:.2e}")
 m2.metric("Harvest Conc", f"{df['Therapeutic EVs'].iloc[-1]:.2e} ev/mL")
@@ -685,10 +687,10 @@ elif yield_achievement >= 100:
     elif quality_score >= 40.0: 
         status_color, quality_color = "#FACA2E", "#FACA2E"
         status_icon = "⚠️"
-        status_text = "MARGINAL: Target reached, but cargo consistency is dropping. Monitor parameters."
+        status_text = "MARGINAL: Target reached, but cargo consistency is dropping."
     else:
         status_color, quality_color = "#E35252", "#E35252"
-        status_icon = """<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E35252" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 8px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>"""
+        status_icon = "❌"
         status_text = "CRITICAL: Severe quality degradation. High risk of DSP failure."
 else:
     status_color, quality_color = "#779ECB", "#779ECB"
@@ -713,13 +715,14 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# --- 10.5. NEW FED-BATCH MASS BALANCE VISUALIZATION ---
+# --- 10.5. KINETICS & TITRATION ---
 st.divider()
-st.subheader("Kinetics")
-c1, c2, c3 = st.columns(3)
+st.subheader("Kinetics & pH Titration")
+c1, c2, c3, c4 = st.columns(4)
 c1.metric("Biomass", f"{final_biomass:.2f} g/L")
 c2.metric("Substrate", f"{final_substrate:.2f} g/L")
 c3.metric("Volume", f"{final_vol:.2f} L")
+c4.metric(f"Req. Base", f"{final_titrant:.2f} L")
 st.plotly_chart(fig_monod, use_container_width=True)
 
 # --- 11. ANALYTICS GRID ---
