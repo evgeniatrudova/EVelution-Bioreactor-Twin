@@ -267,10 +267,10 @@ with st.expander("Explore Logic", expanded=False):
 
 # --- 6. CELL LINE DATABASE ---
 cell_line_db = {
-    "Human MSCs (Bone Marrow)": {"hypoxia": 1.15, "thermal": 0.85, "ph": 0.95},
-    "HEK293T (Suspension)": {"hypoxia": 0.90, "thermal": 1.20, "ph": 0.80},
-    "CHO-K1": {"hypoxia": 0.75, "thermal": 0.95, "ph": 1.30},
-    "Custom / Empirical DoE": {"hypoxia": 1.00, "thermal": 1.00, "ph": 1.00}
+    "Human MSCs (Bone Marrow)": {"hypoxia": 1.15, "thermal": 0.85, "ph": 0.95, "mu_max": 0.02},
+    "HEK293T (Suspension)": {"hypoxia": 0.90, "thermal": 1.20, "ph": 0.80, "mu_max": 0.035},
+    "CHO-K1": {"hypoxia": 0.75, "thermal": 0.95, "ph": 1.30, "mu_max": 0.045},
+    "Custom / Empirical DoE": {"hypoxia": 1.00, "thermal": 1.00, "ph": 1.00, "mu_max": 0.03}
 }
 
 # --- 7. SIDEBAR INPUTS ---
@@ -292,10 +292,23 @@ with st.sidebar:
     s_temp = st.number_input("Thermal Modifier", min_value=0.0, max_value=3.0, value=defaults["thermal"], step=0.05, disabled=not manual_override)
     s_ph = st.number_input("pH Modifier", min_value=0.0, max_value=3.0, value=defaults["ph"], step=0.05, disabled=not manual_override)
     
+    # UPGRADE: mu_max as an intrinsic biological property
+    # Uses .get() as a safeguard in case Section 6 hasn't been updated yet
+    default_mu = defaults.get("mu_max", 0.035) 
+    mu_max = st.number_input(
+        "Max Growth Rate, μ_max (1/h)", 
+        min_value=0.001, max_value=2.000, 
+        value=default_mu, 
+        step=0.005, 
+        format="%.3f",
+        disabled=not manual_override,
+        help="Intrinsic specific growth rate. Mammalian cells typically range from 0.015 to 0.050 1/h."
+    )
+
     st.divider()
     st.header("Metabolism")
     
-    # NEW: Unit Toggle
+    # UPGRADE: Unit Toggle
     unit_toggle = st.radio("Substrate Units", ["g/L", "mol/L"], horizontal=True)
     
     # Assuming Glucose (MW = 180.16 g/mol)
@@ -313,21 +326,49 @@ with st.sidebar:
     s_0 = s_0_input if unit_toggle == "g/L" else s_0_input * mw_glucose
     s_in = s_in_input if unit_toggle == "g/L" else s_in_input * mw_glucose
 
-    f_in = st.slider("Feed Rate (L/h)", 0.0, 5.0, 0.0, step=0.1)
-    mu_max = st.slider("Max Growth Rate (1/h)", 0.05, 0.50, 0.17, step=0.01)
-
     st.divider()
     st.header("Experimental")
+    
+    # Defined before Feeding Strategy so 'vol' exists for maximum feed logic
     vol = st.number_input("Initial Volume (L)", value=50.0)
     o2 = st.slider("Oxygen (%)", 0, 21, 21)
-    
-    # NEW: Expanded Temperature Range
-    temp = st.slider("Temp (°C)", 4, 60, 37)
-    
+    temp = st.slider("Temp (°C)", 4, 60, 37)  # Expanded Temp Range
     ph = st.slider("pH", 6.0, 8.0, 7.4)
     mix = st.slider("Mixing (%)", 50, 100, 85)
     dur = st.slider("Duration (h)", 12, 72, 48)
+
+    st.divider()
+    st.header("Feeding Strategy")
+
+    # UPGRADE: Dynamic Feeding Strategies
+    feed_strategy = st.selectbox(
+        "Profile Type", 
+        ["Constant Feed", "Exponential Feed", "Dilution Rate (D)"]
+    )
+
+    # Initialize variables for the ODE engine to prevent reference errors
+    f_in_initial = 0.0
+    mu_setpoint = 0.0
+    dilution_rate = 0.0
+    is_chemostat = False 
+
+    if feed_strategy == "Constant Feed":
+        max_safe_feed = vol * 0.1 # Bound it to 10% of volume per hour
+        f_in_initial = st.number_input("Feed Rate (L/h)", min_value=0.0, max_value=float(max_safe_feed), value=0.0, step=0.05)
     
+    elif feed_strategy == "Exponential Feed":
+        st.caption("Matches feed to cell growth to prevent overfeeding.")
+        mu_setpoint = st.number_input("Target Growth Rate for Feed (1/h)", min_value=0.005, max_value=0.100, value=0.020, step=0.005, format="%.3f")
+        f_in_initial = st.number_input("Initial Feed Rate (L/h)", value=0.1, step=0.05)
+
+    elif feed_strategy == "Dilution Rate (D)":
+        st.caption("Feed rate scales dynamically with bioreactor volume.")
+        dilution_rate = st.number_input("Dilution Rate, D (1/h)", min_value=0.000, max_value=0.500, value=0.010, step=0.005, format="%.3f")
+        
+        is_chemostat = st.toggle("Enable Chemostat (F_out = F_in)")
+        if is_chemostat:
+            st.caption("Volume remains constant. Biomass and Substrate will wash out.")
+
     st.divider()
     st.header("Yield Target")
     t_col1, t_col2 = st.columns(2)
