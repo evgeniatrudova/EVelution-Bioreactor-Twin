@@ -488,7 +488,10 @@ sens_data = []
 
 # Loop dynamically to ensure Biomass and Volume scale per duration step
 for d in sens_range:
-    temp_mb = model.run_mass_balance(vol, s_0, f_in, s_in, mu_max, o2, temp, ph, d)
+    temp_mb = model.run_mass_balance(
+    vol, s_0, s_in, mu_max, o2, temp, ph, d,
+    feed_strategy, f_in_initial, mu_setpoint, dilution_rate, is_chemostat
+)
     temp_vol = temp_mb["Volume (L)"].iloc[-1]
     
     # Pass the isolated duration's biomass series into the simulation
