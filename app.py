@@ -665,9 +665,6 @@ is_startup = (
 )
 
 if is_startup:
-    status_color, quality_color = "#779ECB", "#779ECB"
-
-if is_startup:
     status_color, quality_color = "#779ECB", "#779ECB" 
     status_icon = "💡"
     status_text = "AWAITING OPTIMIZATION: Default baseline loaded. Adjust parameters to begin."
