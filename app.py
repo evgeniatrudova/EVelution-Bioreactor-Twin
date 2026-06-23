@@ -429,7 +429,10 @@ final_substrate = mb_df["Substrate (g/L)"].iloc[-1]
 final_vol = mb_df["Volume (L)"].iloc[-1]
 
 # RUN EV SIMULATION using the dynamic Biomass series
-df = model.run_simulation(o2, temp, ph, mix, dur, s_o2, s_temp, s_ph, mb_df["Biomass (g/L)"])
+df = model.run_simulation(
+    o2, temp, ph, mix, dur, s_o2, s_temp, s_ph, mb_df["Biomass (g/L)"], 
+    feed_type, titrant_molarity
+)
 
 # CALCULATE YIELD METRICS
 avg_viability = df["Cell Viability (%)"].mean() / 100.0
