@@ -92,11 +92,12 @@ class BiogenesisEngine:
         pH_mod = 1 + (0.5 * (10**(-ph) / 10**(-pH0))**2) / (0.1**2 + (10**(-ph) / 10**(-pH0))**2)
         return max(0, base_rate * (lambda_hyp**s_o2) * (thermal_flux**s_temp) * ((gibbs * pH_mod)**s_ph))
 
-class FedBatchBioreactorModel:
+ class FedBatchBioreactorModel:
     def __init__(self): 
         self.base_rate = 1.2e9
     
-def run_mass_balance(self, init_vol, s_0, s_in, mu_max, o2, temp, ph, dur, feed_strategy, f_in_initial, mu_setpoint, dilution_rate, is_chemostat, feed_type, titrant_molarity):
+    # COUNT THE ARGUMENTS: There should be 15 inside the parentheses
+    def run_mass_balance(self, init_vol, s_0, s_in, mu_max, o2, temp, ph, dur, feed_strategy, f_in_initial, mu_setpoint, dilution_rate, is_chemostat, feed_type, titrant_molarity):
         import math 
         
         # --- DYNAMIC FEED CONSTANTS ---
