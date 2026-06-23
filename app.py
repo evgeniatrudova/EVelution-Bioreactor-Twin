@@ -252,7 +252,11 @@ cell_line_db = {
 
 # --- 7. SIDEBAR INPUTS ---
 with st.sidebar:
-    st.header("Cell Line")
+    st.header("Cell Line & Batch Info")
+    
+    # NEW: Batch Naming
+    batch_name = st.text_input("Batch ID", "EXP-001")
+    
     selected_cell = st.selectbox("Select Host Cell Line", list(cell_line_db.keys()))
     defaults = cell_line_db[selected_cell]
     
@@ -262,17 +266,37 @@ with st.sidebar:
     s_ph = st.number_input("pH Modifier", min_value=0.0, max_value=3.0, value=defaults["ph"], step=0.05, disabled=not manual_override)
     
     st.divider()
-    st.header("Metabolism ")
-    s_0 = st.number_input("Substrate (g/L)", value=10.0, step=1.0)
+    st.header("Metabolism")
+    
+    # NEW: Unit Toggle
+    unit_toggle = st.radio("Substrate Units", ["g/L", "mol/L"], horizontal=True)
+    
+    # Assuming Glucose (MW = 180.16 g/mol)
+    mw_glucose = 180.16 
+    
+    # Calculate default display values based on the toggle
+    display_s0 = 10.0 if unit_toggle == "g/L" else (10.0 / mw_glucose)
+    display_sin = 100.0 if unit_toggle == "g/L" else (100.0 / mw_glucose)
+    
+    # UI Inputs
+    s_0_input = st.number_input(f"Initial Substrate ({unit_toggle})", value=display_s0, step=display_s0 * 0.1)
+    s_in_input = st.number_input(f"Feed Concentration ({unit_toggle})", value=display_sin, step=display_sin * 0.1)
+    
+    # Convert back to g/L for the backend math
+    s_0 = s_0_input if unit_toggle == "g/L" else s_0_input * mw_glucose
+    s_in = s_in_input if unit_toggle == "g/L" else s_in_input * mw_glucose
+
     f_in = st.slider("Feed Rate (L/h)", 0.0, 5.0, 0.0, step=0.1)
-    s_in = st.number_input("Feed Concentration (g/L)", value=100.0, step=10.0)
     mu_max = st.slider("Max Growth Rate (1/h)", 0.05, 0.50, 0.17, step=0.01)
 
     st.divider()
     st.header("Experimental")
     vol = st.number_input("Initial Volume (L)", value=50.0)
     o2 = st.slider("Oxygen (%)", 0, 21, 21)
-    temp = st.slider("Temp (°C)", 30, 45, 37)
+    
+    # NEW: Expanded Temperature Range
+    temp = st.slider("Temp (°C)", 4, 60, 37)
+    
     ph = st.slider("pH", 6.0, 8.0, 7.4)
     mix = st.slider("Mixing (%)", 50, 100, 85)
     dur = st.slider("Duration (h)", 12, 72, 48)
