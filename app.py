@@ -446,7 +446,7 @@ with st.sidebar:
     uploaded_file = st.file_uploader(
         "Upload History File (.csv)", 
         type="csv",
-        help="Upload past batch data. The app auto-detects common time and yield columns in English and Swedish (e.g., Hour/Timme, Titer/Utbyte).",
+        help="Upload past batch data to overlay your real-world data as a dashed red batch line on the simulated Process Accumulation graph. The app auto-detects common time and yield columns in English and Swedish (e.g., Hour/Timme, Titer/Utbyte).",
         key="csv_uploader"
     )
     
