@@ -782,4 +782,26 @@ with r2c2:
         t2.markdown("The mathematical optimization seeks to maximize yield while minimizing the integral of accumulated toxic variance.")
 
 
+# --- 12. GROWTH RATE ANALYSIS ---
+st.divider()
+st.subheader("Physiological Growth Rate (μ)")
 
+# Build Figure 5: Growth Rate
+fig_growth = px.line(mb_df, x="Hour", y="Growth Rate (1/h)", 
+                     line_shape='spline', 
+                     color_discrete_sequence=[C_PURPLE])
+
+fig_growth.update_layout(
+    height=300, 
+    margin=fixed_margin, 
+    hovermode="x unified",
+    xaxis_title="Culture Duration (Hours)",
+    yaxis_title="Specific Growth Rate (1/h)"
+)
+
+st.plotly_chart(fig_growth, use_container_width=True)
+
+with st.expander("Explore Theory"):
+    st.markdown("The growth rate ($\mu$) is governed by Monod Kinetics:")
+    st.latex(r"\mu = \mu_{max} \cdot \left( \frac{S}{K_s + S} \right)")
+    st.markdown("As substrate ($S$) is consumed, the growth rate approaches zero, signaling the entry into the stationary phase. In fed-batch processes, maintaining a stable $\mu$ is key to preventing cellular metabolic shift.")
