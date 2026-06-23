@@ -429,12 +429,39 @@ true_val = total_prod * final_vol * 1000 * dynamic_purity * dynamic_consistency
 yield_achievement = (true_val / target) * 100
 quality_score = (dynamic_purity * dynamic_consistency) * 100
 
-# Build Figure 0
-fig_monod = go.Figure()
-fig_monod.add_trace(go.Scatter(x=mb_df["Hour"], y=mb_df["Biomass (g/L)"], mode='lines', name='Biomass (g/L)', line=dict(color=C_BLUE, width=3)))
-fig_monod.add_trace(go.Scatter(x=mb_df["Hour"], y=mb_df["Substrate (g/L)"], mode='lines', name='Substrate (g/L)', line=dict(color=C_GREEN, width=3)))
-fig_monod.add_trace(go.Scatter(x=mb_df["Hour"], y=mb_df["Volume (L)"], mode='lines', name='Volume (L)', line=dict(color=C_STAR, width=3)))
-fig_monod.update_layout(height=400, margin=fixed_margin, hovermode="x unified", legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
+# Build Figure 0: Kinetics 
+fig_monod = make_subplots(specs=[[{"secondary_y": True}]])
+
+# 1. Primary Y-Axis (Left): Concentration (g/L)
+fig_monod.add_trace(
+    go.Scatter(x=mb_df["Hour"], y=mb_df["Biomass (g/L)"], mode='lines', name='Biomass (g/L)', line=dict(color=C_BLUE, width=3)),
+    secondary_y=False,
+)
+fig_monod.add_trace(
+    go.Scatter(x=mb_df["Hour"], y=mb_df["Substrate (g/L)"], mode='lines', name='Substrate (g/L)', line=dict(color=C_GREEN, width=3)),
+    secondary_y=False,
+)
+
+# 2. Secondary Y-Axis (Right): Volume (L)
+# Using a dotted line for Volume helps industry operators instantly distinguish it from concentrations
+fig_monod.add_trace(
+    go.Scatter(x=mb_df["Hour"], y=mb_df["Volume (L)"], mode='lines', name='Volume (L)', line=dict(color=C_STAR, width=3, dash='dot')),
+    secondary_y=True,
+)
+
+# 3. Layout Formatting
+fig_monod.update_layout(
+    height=400, 
+    margin=fixed_margin, 
+    hovermode="x unified", 
+    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+)
+
+# 4. Axis Titles
+fig_monod.update_yaxes(title_text="Concentration (g/L)", secondary_y=False, color="#B39EB5")
+fig_monod.update_yaxes(title_text="Volume (L)", secondary_y=True, color=C_STAR)
+fig_monod.update_xaxes(title_text="Culture Duration (Hours)")
+
 
 # Build Figure 1: Accumulation
 fig_accum = px.line(df, x="Hour", y=["Therapeutic EVs", "Stress-Altered EVs", "Apoptotic Impurities"], log_y=True,
