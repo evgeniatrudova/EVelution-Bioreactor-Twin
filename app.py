@@ -160,7 +160,7 @@ def run_mass_balance(self, init_vol, s_0, s_in, mu_max, o2, temp, ph, dur, feed_
             
         return pd.DataFrame(history)
 
-    def run_simulation(self, init_o2, target_temp, target_ph, mixing_homogeneity, duration_hours, s_o2, s_temp, s_ph, biomass_series):
+    def run_simulation(self, init_o2, target_temp, target_ph, mixing_homogeneity, duration_hours, s_o2, s_temp, s_ph, biomass_series, feed_type, titrant_molarity):
         viability = 100.0
         history = {"Hour": [], "Therapeutic EVs": [], "Stress-Altered EVs": [], "Apoptotic Impurities": [], "Cell Viability (%)": []}
         
