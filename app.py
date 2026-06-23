@@ -525,15 +525,12 @@ fig_viab.update_layout(height=fixed_height, margin=fixed_margin, showlegend=Fals
 fig_funnel = go.Figure(go.Funnel(y=["Raw Yield", "Intact (Purity)", "Functional"], x=[true_val/(0.78*0.62), true_val/0.62, true_val], textinfo="value+percent previous", marker={"color": [C_BLUE, C_PURPLE, C_GREEN]}))
 fig_funnel.update_layout(height=fixed_height, margin=fixed_margin)
 
-# Build Figure 4: Sensitivity (OPTIMIZED WITH CACHING)
-
+# Build Figure 4: Sensitivity 
 @st.cache_data(show_spinner=False)
 def calculate_sensitivity(vol, s_0, s_in, mu_max, o2, temp, ph, mix, s_o2, s_temp, s_ph, 
-                          feed_strategy, f_in_initial, mu_setpoint, dilution_rate, is_chemostat):
-    """
-    Caches the 14-step sensitivity loop. It only recalculates if the user explicitly 
-    changes an upstream bioreactor parameter.
-    """
+                          feed_strategy, f_in_initial, mu_setpoint, dilution_rate, is_chemostat, 
+                          feed_type, titrant_molarity): # <--- ADDED NEW ARGUMENTS
+    
     temp_model = FedBatchBioreactorModel()
     sens_range = list(range(12, 96, 6))
     sens_data = []
@@ -541,12 +538,14 @@ def calculate_sensitivity(vol, s_0, s_in, mu_max, o2, temp, ph, mix, s_o2, s_tem
     for d in sens_range:
         temp_mb = temp_model.run_mass_balance(
             vol, s_0, s_in, mu_max, o2, temp, ph, d,
-            feed_strategy, f_in_initial, mu_setpoint, dilution_rate, is_chemostat
+            feed_strategy, f_in_initial, mu_setpoint, dilution_rate, is_chemostat,
+            feed_type, titrant_molarity # <--- ADDED NEW ARGUMENTS
         )
         temp_vol = temp_mb["Volume (L)"].iloc[-1]
         
         # Pass the isolated duration's biomass series into the simulation
-        temp_df = temp_model.run_simulation(o2, temp, ph, mix, d, s_o2, s_temp, s_ph, temp_mb["Biomass (g/L)"])
+        temp_df = temp_model.run_simulation(o2, temp, ph, mix, d, s_o2, s_temp, s_ph, temp_mb["Biomass (g/L)"], 
+                                            feed_type, titrant_molarity) # <--- ADDED NEW ARGUMENTS
         
         step_yield = temp_df["Therapeutic EVs"].sum() * temp_vol * 1000 * 0.78 * 0.62
         sens_data.append(step_yield)
@@ -556,9 +555,11 @@ def calculate_sensitivity(vol, s_0, s_in, mu_max, o2, temp, ph, mix, s_o2, s_tem
 # Execute the cached function by passing in all the active UI parameters
 sens_range, sens_data = calculate_sensitivity(
     vol, s_0, s_in, mu_max, o2, temp, ph, mix, s_o2, s_temp, s_ph, 
-    feed_strategy, f_in_initial, mu_setpoint, dilution_rate, is_chemostat
+    feed_strategy, f_in_initial, mu_setpoint, dilution_rate, is_chemostat,
+    feed_type, titrant_molarity # <--- ADDED NEW ARGUMENTS
 )
 
+# Build the chart (This part remains the same)
 variance_percentages = np.linspace(0.02, 0.15, len(sens_range))
 upper_bound = [val * (1 + var) for val, var in zip(sens_data, variance_percentages)]
 lower_bound = [val * (1 - var) for val, var in zip(sens_data, variance_percentages)]
