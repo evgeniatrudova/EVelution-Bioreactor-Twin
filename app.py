@@ -419,10 +419,12 @@ with st.sidebar:
 model = FedBatchBioreactorModel()
 
 # RUN MASS BALANCE FIRST to get X(t)
+# --- Updated Execution Call (Section 8) ---
 mb_df = model.run_mass_balance(
-            vol, s_0, s_in, mu_max, o2, temp, ph, dur,
-            feed_strategy, f_in_initial, mu_setpoint, dilution_rate, is_chemostat, feed_type, titrant_molarity
-        )
+    vol, s_0, s_in, mu_max, o2, temp, ph, dur,
+    feed_strategy, f_in_initial, mu_setpoint, dilution_rate, is_chemostat, 
+    feed_type, titrant_molarity
+)
 final_biomass = mb_df["Biomass (g/L)"].iloc[-1]
 final_substrate = mb_df["Substrate (g/L)"].iloc[-1]
 final_vol = mb_df["Volume (L)"].iloc[-1]
