@@ -95,28 +95,49 @@ class FedBatchBioreactorModel:
     def __init__(self): 
         self.base_rate = 1.2e9
     
-    # NEW: Monod Mass Balance Euler Integration
-    def run_mass_balance(self, init_vol, s_0, f_in, s_in, mu_max, o2, temp, ph, dur):
-        X = 0.5  # Initial Biomass (g/L)
-        S = s_0  # Initial Substrate (g/L)
-        V = init_vol # Initial Volume (L)
+    # Monod Mass Balance Euler Integration
+    def run_mass_balance(self, init_vol, s_0, s_in, mu_max, o2, temp, ph, dur, feed_strategy, f_in_initial, mu_setpoint, dilution_rate, is_chemostat):
+        import math # Required for exponential growth calculation
+        
+        # Standard Monod Constants
         Ks = 0.1
         Yxs = 0.5
         
+        X, S, V = 0.5, s_0, init_vol
         history = {"Hour": [], "Biomass (g/L)": [], "Substrate (g/L)": [], "Volume (L)": []}
         
-        # Calculate dynamic environmental stress modifiers
-        E_o2 = min(1.0, (o2 / (2.0 + o2)) * 1.1)
-        E_temp = np.exp(-((temp - 37.0)**2) / (4.0 if temp > 37.0 else 25.0))
-        E_ph = np.exp(-((ph - 7.4)**2) / 0.4)
-        
         for hour in range(1, dur + 1):
-            dt = 1.0 / 100.0  # 100 integration steps per hour for Euler stability
-            for _ in range(100):
-                mu = mu_max * E_o2 * E_temp * E_ph * (S / (Ks + S)) if S > 0 else 0
-                dV = f_in * dt
-                dX = (mu * X - (f_in / V) * X) * dt if V > 0 else 0
-                dS = (-(mu * X) / Yxs + (f_in / V) * (s_in - S)) * dt if V > 0 else 0
+            dt = 1.0 / 100.0 
+            for step in range(100):
+                current_time = hour - 1 + (step * dt)
+
+                # --- DYNAMIC FEEDING LOGIC ---
+                if feed_strategy == "Constant Feed":
+                    f_in_current = f_in_initial
+                elif feed_strategy == "Exponential Feed":
+                    f_in_current = f_in_initial * math.exp(mu_setpoint * current_time)
+                elif feed_strategy == "Dilution Rate (D)":
+                    f_in_current = dilution_rate * V
+                else:
+                    f_in_current = 0.0
+                
+                # --- CHEMOSTAT OUTFLOW LOGIC ---
+                f_out_current = f_in_current if is_chemostat else 0.0
+
+                # --- MONOD MASS BALANCE KINETICS ---
+                mu = mu_max * (S / (Ks + S)) if S > 0 else 0
+                
+                # Volume changes by Inflow minus Outflow
+                dV = (f_in_current - f_out_current) * dt
+                
+                # Dilution rate (D) is Outflow / Volume
+                D = (f_out_current / V) if V > 0 else 0
+                
+                # Biomass: Growth - Washout - Dilution (from F_in expanding volume)
+                dX = (mu * X - D * X - (f_in_current / V) * X) * dt if V > 0 else 0
+                
+                # Substrate: Inflow - Consumption - Washout - Dilution
+                dS = ((f_in_current / V) * s_in - (mu * X) / Yxs - D * S - (f_in_current / V) * S) * dt if V > 0 else 0
                 
                 V += dV
                 X = max(0.0, X + dX)
