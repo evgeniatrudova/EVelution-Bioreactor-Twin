@@ -608,7 +608,7 @@ st.markdown("### Batch Success Evaluation")
 is_startup = (
     selected_cell == "Human MSCs (Bone Marrow)" and
     vol == 50.0 and o2 == 21 and temp == 37 and ph == 7.4 and mix == 85 and dur == 48 and
-    target_base == 1.0 and target_exp == 15 and not manual_override and f_in == 0.0
+    target_base == 1.0 and target_exp == 15 and not manual_override and feed_strategy == "Constant Feed" and f_in_initial == 0.0
 )
 
 if is_startup:
