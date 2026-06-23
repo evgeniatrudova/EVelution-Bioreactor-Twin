@@ -96,23 +96,15 @@ class BiogenesisEngine:
     def __init__(self): 
         self.base_rate = 1.2e9
     
-    # COUNT THE ARGUMENTS: There should be 15 inside the parentheses
     def run_mass_balance(self, init_vol, s_0, s_in, mu_max, o2, temp, ph, dur, feed_strategy, f_in_initial, mu_setpoint, dilution_rate, is_chemostat, feed_type, titrant_molarity):
         import math 
-        
-        # --- DYNAMIC FEED CONSTANTS ---
         feed_db = {
             "Glucose (Pure)": {"Ks": 0.1, "Yxs": 0.5},
             "Molasses (Complex)": {"Ks": 0.4, "Yxs": 0.35} 
         }
         Ks = feed_db[feed_type]["Ks"]
         Yxs = feed_db[feed_type]["Yxs"]
-        
-        # --- TITRATION CONSTANTS ---
-        Y_lac_x = 0.8 # Grams of Lactic acid produced per gram of biomass
-        MW_lactic_acid = 90.08 # g/mol
-        total_lactic_acid_g = 0.0
-        
+        Y_lac_x, MW_lactic_acid, total_lactic_acid_g = 0.8, 90.08, 0.0
         X, S, V = 0.5, s_0, init_vol
         history = {"Hour": [], "Biomass (g/L)": [], "Substrate (g/L)": [], "Volume (L)": [], "Titrant Needed (L)": []}
         
@@ -120,45 +112,43 @@ class BiogenesisEngine:
             dt = 1.0 / 100.0 
             for step in range(100):
                 current_time = hour - 1 + (step * dt)
-
-                if feed_strategy == "Constant Feed":
-                    f_in_current = f_in_initial
-                elif feed_strategy == "Exponential Feed":
-                    f_in_current = f_in_initial * math.exp(mu_setpoint * current_time)
-                elif feed_strategy == "Dilution Rate (D)":
-                    f_in_current = dilution_rate * V
-                else:
-                    f_in_current = 0.0
-                
+                if feed_strategy == "Constant Feed": f_in_current = f_in_initial
+                elif feed_strategy == "Exponential Feed": f_in_current = f_in_initial * math.exp(mu_setpoint * current_time)
+                elif feed_strategy == "Dilution Rate (D)": f_in_current = dilution_rate * V
+                else: f_in_current = 0.0
                 f_out_current = f_in_current if is_chemostat else 0.0
-
-                # Kinetics
                 mu = mu_max * (S / (Ks + S)) if S > 0 else 0
-                
                 dV = (f_in_current - f_out_current) * dt
                 D = (f_out_current / V) if V > 0 else 0
-                
                 dX = (mu * X - D * X - (f_in_current / V) * X) * dt if V > 0 else 0
                 dS = ((f_in_current / V) * s_in - (mu * X) / Yxs - D * S - (f_in_current / V) * S) * dt if V > 0 else 0
-                
-                # Calculate Lactic Acid accumulation
-                if dX > 0:
-                    total_lactic_acid_g += (dX * V * Y_lac_x)
-                
+                if dX > 0: total_lactic_acid_g += (dX * V * Y_lac_x)
                 V += dV
                 X = max(0.0, X + dX)
                 S = max(0.0, S + dS)
-                
-            # --- CALCULATE TITRATION ---
             moles_lactic = total_lactic_acid_g / MW_lactic_acid
             titrant_vol_L = moles_lactic / titrant_molarity 
-                
             history["Hour"].append(hour)
             history["Biomass (g/L)"].append(X)
             history["Substrate (g/L)"].append(S)
             history["Volume (L)"].append(V)
             history["Titrant Needed (L)"].append(titrant_vol_L)
-            
+        return pd.DataFrame(history)
+
+    def run_simulation(self, init_o2, target_temp, target_ph, mixing_homogeneity, duration_hours, s_o2, s_temp, s_ph, biomass_series, feed_type, titrant_molarity):
+        viability = 100.0
+        history = {"Hour": [], "Therapeutic EVs": [], "Stress-Altered EVs": [], "Apoptotic Impurities": [], "Cell Viability (%)": []}
+        for hour in range(1, duration_hours + 1):
+            active_biomass = biomass_series.iloc[hour - 1] if hasattr(biomass_series, 'iloc') else biomass_series[hour - 1]
+            dynamic_base_rate = self.base_rate * active_biomass
+            rate = BiogenesisEngine.calc_flux(init_o2, target_temp, target_ph, s_o2, s_temp, s_ph, dynamic_base_rate)
+            shear = ((mixing_homogeneity - 85.0)**1.5 * 0.1) if mixing_homogeneity > 85 else 0
+            viability = max(0, viability - (0.5 + shear))
+            history["Hour"].append(hour)
+            history["Therapeutic EVs"].append(rate * (viability / 100))
+            history["Stress-Altered EVs"].append(rate * ((100 - viability) / 100) * 0.3)
+            history["Apoptotic Impurities"].append(dynamic_base_rate * ((100 - viability) / 100) * 5)
+            history["Cell Viability (%)"].append(viability)
         return pd.DataFrame(history)
 
 def run_simulation(self, init_o2, target_temp, target_ph, mixing_homogeneity, duration_hours, s_o2, s_temp, s_ph, biomass_series, feed_type, titrant_molarity):
