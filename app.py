@@ -16,6 +16,8 @@ import plotly.graph_objects as go
 import plotly.express as px
 from fpdf import FPDF
 import io
+import hashlib
+import time
 
 # --- 1. THEME & STYLING ---
 st.set_page_config(page_title="EVelution Bioreactor Twin", layout="wide", initial_sidebar_state="auto")
@@ -155,8 +157,7 @@ class FedBatchBioreactorModel:
         return pd.DataFrame(history)
 
 # --- 4. ADVANCED PDF GENERATOR ---
-import hashlib
-import time
+
 
 def generate_qms_pdf(batch_id, cell_line, vol, dur, target, yield_val, purity, consistency, q_score):
     pdf = FPDF()
