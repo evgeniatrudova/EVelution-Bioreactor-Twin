@@ -330,35 +330,39 @@ with st.sidebar:
     st.divider()
     st.header("Metabolism")
     
-    # UPGRADE: Unit Toggle
+    # NEW: Carbon Source (Feed Type)
+    feed_type = st.selectbox("Carbon Source", ["Glucose (Pure)", "Molasses (Complex)"])
+    
     unit_toggle = st.radio("Substrate Units", ["g/L", "mol/L"], horizontal=True)
     
     # Assuming Glucose (MW = 180.16 g/mol)
     mw_glucose = 180.16 
     
-    # Calculate default display values based on the toggle
     display_s0 = 10.0 if unit_toggle == "g/L" else (10.0 / mw_glucose)
     display_sin = 100.0 if unit_toggle == "g/L" else (100.0 / mw_glucose)
     
-    # UI Inputs
     s_0_input = st.number_input(f"Initial Substrate ({unit_toggle})", value=display_s0, step=display_s0 * 0.1)
     s_in_input = st.number_input(f"Feed Concentration ({unit_toggle})", value=display_sin, step=display_sin * 0.1)
     
-    # Convert back to g/L for the backend math
     s_0 = s_0_input if unit_toggle == "g/L" else s_0_input * mw_glucose
     s_in = s_in_input if unit_toggle == "g/L" else s_in_input * mw_glucose
 
     st.divider()
     st.header("Experimental")
     
-    # Defined before Feeding Strategy so 'vol' exists for maximum feed logic
     vol = st.number_input("Initial Volume (L)", value=50.0)
     o2 = st.slider("Oxygen (%)", 0, 21, 21)
-    temp = st.slider("Temp (°C)", 4, 60, 37)  # Expanded Temp Range
-    ph = st.slider("pH", 6.0, 8.0, 7.4)
+    temp = st.slider("Temp (°C)", 4, 60, 37)
+    ph = st.slider("Target pH", 6.0, 8.0, 7.4)
+    
+    # NEW: Titration Magnitude & Strength
+    st.caption("pH Control Strategy")
+    titrant_type = st.selectbox("Base Type", ["NaOH (Sodium Hydroxide)", "NaHCO3 (Sodium Bicarbonate)"])
+    titrant_molarity = st.number_input("Base Strength (Molarity, M)", min_value=0.1, max_value=5.0, value=1.0, step=0.1)
+    
     mix = st.slider("Mixing (%)", 50, 100, 85)
-    dur = st.slider("Duration (h)", 24, 336, 240) # Defaults to 10 days
-
+    dur = st.slider("Duration (h)", 24, 336, 240) # Industry 10-day default!
+    
     st.divider()
     st.header("Feeding Strategy")
 
