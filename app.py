@@ -658,9 +658,14 @@ st.markdown("### Batch Success Evaluation")
 
 is_startup = (
     selected_cell == "Human MSCs (Bone Marrow)" and
-    vol == 50.0 and o2 == 21 and temp == 37 and ph == 7.4 and mix == 85 and dur == 48 and
-    target_base == 1.0 and target_exp == 15 and not manual_override and feed_strategy == "Constant Feed" and f_in_initial == 0.0
+    vol == 50.0 and o2 == 21 and temp == 37 and ph == 7.4 and mix == 85 and dur == 240 and
+    target_base == 1.0 and target_exp == 15 and not manual_override and 
+    feed_strategy == "Constant Feed" and f_in_initial == 0.0 and
+    feed_type == "Glucose (Pure)" and titrant_molarity == 1.0 and unit_toggle == "g/L"
 )
+
+if is_startup:
+    status_color, quality_color = "#779ECB", "#779ECB"
 
 if is_startup:
     status_color, quality_color = "#779ECB", "#779ECB" 
