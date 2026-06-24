@@ -255,8 +255,14 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-with st.expander("Explore Logic", expanded=False):
-    tab_bio, tab_math = st.tabs(["Biology", "Model"])
+with st.expander("Explore Methodology & Case Studies", expanded=False):
+    # Expanded tabs to include full end-to-end end bioprocess pipeline calculations
+    tab_bio, tab_math, tab_dev, tab_opt = st.tabs([
+        "Biology", 
+        "Model", 
+        "Deviation: Viability Collapse", 
+        "Target: Golden Batch"
+    ])
     
     with tab_bio:
         st.markdown("""
@@ -273,20 +279,111 @@ with st.expander("Explore Logic", expanded=False):
         """)
         
     with tab_math:
-        st.markdown("Metrics")
+        st.markdown("**Metrics**")
         st.latex(r" \text{Yield Performance: } Y_{perf} = \left( \sum_{t=1}^{T} \Phi(t) \cdot V_{react} \right) \cdot \eta_{purity} \cdot \phi_{consistency}")
         st.latex(r" \text{Harvest Conc: } \Phi_{final} = \Phi(t_{harvest})")
         st.latex(r" \text{Purity: } \eta_{purity} = \frac{EV_{purified}}{EV_{crude}} \quad \text{Consistency: } \phi_{consistency} = \frac{EV_{loaded}}{EV_{total}}")
         
         st.divider()
         
-        st.markdown("Biogenesis")
+        st.markdown("**Biogenesis**")
         st.latex(r" \text{Hypoxia (Hill): } \lambda_{hyp} = \frac{K^n + x_0^n}{K^n + O_2^n}")
         st.latex(r" \text{Thermal (Arrhenius + Shock): } S_{temp} = A_0 e^{-\frac{E_a}{R}\left(\frac{1}{T} - \frac{1}{T_0}\right)} \cdot \left( 1 + \frac{(T - 37)^2}{1^2 + (T - 37)^2} \right)")
         st.latex(r" \text{pH (Gibbs + Inhibition): } S_{pH} = e^{-\frac{2.303 RT (pH - pH_0)}{RT}} \cdot \left( 1 + \frac{0.5 \left(\frac{[H^+]}{[H^+]_0}\right)^2}{0.1^2 + \left(\frac{[H^+]}{[H^+]_0}\right)^2} \right)")
         
         st.markdown("**Total Hourly Production Flux:**")
         st.latex(r" \Phi(t) = \Phi_{base} \cdot \lambda_{hyp}^{s_{o2}} \cdot S_{temp}^{s_{temp}} \cdot S_{pH}^{s_{ph}}")
+
+    with tab_dev:
+        st.markdown("### Manual Calculation: End-to-End Out-of-Specification (OOS) Event")
+        st.markdown("""
+        **The Scenario:** A 50L bioreactor experienced a critical viability collapse at **$t = 19$ hours**. Aggressive PID tuning caused excessive impeller agitation. This section traces the full mathematical pipeline from cell growth to downstream failure.
+        
+        **Given Process Variables:**
+        * **Culture Age ($t$):** $19 \text{ h}$ | **Viability ($V_0$):** $100\%$ | **Toxicity ($\kappa_{tox}$):** $0.5\% \text{ h}^{-1}$ 
+        * **Agitation Homogeneity ($H_{mix}$):** $93\%$ (Exceeds $85\%$ safe limit)
+        * **Environmental Setpoints:** $O_2 = 21\%$ (Normoxia), $T = 37^\circ C$, $pH = 7.4$
+        
+        ---
+        **Phase 1: Cell Growth & Base Flux**
+        Therapeutic production is a function of active biomass ($X$) governed by Monod kinetics. Assuming substrate is not limiting, we define the baseline production capacity:
+        """)
+        st.latex(r"\Phi_{base}(t) = q_{EV} \cdot X(t)")
+        
+        st.markdown("""
+        **Phase 2: MMModel Environmental Kinetics**
+        At standard normoxic conditions, the biogenesis modifiers default to their baseline state ($1.0$), offering no stress-induced acceleration:
+        """)
+        st.latex(r"\lambda_{hyp} = \frac{10^2 + 21^2}{10^2 + 21^2} = \mathbf{1.0}")
+        st.latex(r"\Phi_{total}(19) = \Phi_{base} \cdot (1.0_{hyp}) \cdot (1.0_{temp}) \cdot (1.0_{pH}) = \mathbf{\Phi_{base}}")
+
+        st.markdown("""
+        **Phase 3: Hydrodynamic Shear & Viability Collapse**
+        Evaluating the mechanical damage inflicted on the cells per hour due to over-agitation, and computing total viability at $t=19$:
+        """)
+        st.latex(r"\tau_{shear} = \max\left(0, 0.1 \cdot (93 - 85)^{1.5}\right) \approx \mathbf{2.26\% \text{ h}^{-1}}")
+        st.latex(r"V_{19} = 100\% - \left[ (0.5\% + 2.26\%) \cdot 19 \text{ h} \right] = \mathbf{47.56\%}")
+        st.markdown("> *Diagnostic Result:* Viability drops below the $V_{crit}$ (50%) boundary. The membranes rupture, triggering the Death Cliff.")
+        
+        st.markdown("""
+        **Phase 4: Apoptotic Impurity Generation**
+        Determining the instantaneous ratio of toxic impurities ($I_R$) to therapeutic EVs resulting from the membrane rupture:
+        """)
+        st.latex(r"\Phi_{Apoptotic} = \Phi_{total} \cdot \left( \frac{100 - 47.56}{100} \right) \cdot 5 = \mathbf{2.62 \cdot \Phi_{total}}")
+        st.latex(r"I_R = \frac{\Phi_{Apoptotic}}{\Phi_{total}} = \mathbf{2.62}")
+        
+        st.markdown("""
+        **Phase 5: Downstream Processing (DSP) & QA Clearance**
+        The downstream purity recovery ($\eta_{purity}$) and cargo consistency ($\phi_{consistency}$) are severely penalized by the high impurity ratio and low viability:
+        """)
+        st.latex(r"\eta_{purity} = 0.78 \cdot \left( \frac{1}{1 + (I_R \cdot 0.05)} \right) = 0.78 \cdot \left( \frac{1}{1 + 0.131} \right) = \mathbf{68.9\%}")
+        st.latex(r"\phi_{consistency} = 0.62 \cdot \sqrt{\frac{V_{19}}{100}} = 0.62 \cdot \sqrt{0.475} = \mathbf{42.7\%}")
+        st.latex(r"QA_{Score} = \eta_{purity} \cdot \phi_{consistency} = 0.689 \cdot 0.427 = \mathbf{29.4\%}")
+        st.markdown("> *Process Impact:* A QA Score of 29.4% triggers an automatic batch rejection. Downstream clearance is mathematically impossible.")
+
+    with tab_opt:
+        st.markdown("### Manual Calculation: End-to-End Golden Batch Baseline")
+        st.markdown("""
+        **The Scenario:** Following the OOS event, engineers establish a "Golden Batch". Agitation is strictly capped to prevent shear, and **Hypoxia ($5\% O_2$)** is intentionally induced to trigger the MMModel evolutionary panic response, safely maximizing yield over 48 hours.
+        
+        **Adjusted Process Variables:**
+        * **Target Harvest Age ($t$):** $48 \text{ h}$
+        * **Agitation Homogeneity ($H_{mix}$):** $85.5\%$ (Safely capped)
+        * **Environmental Setpoints:** $O_2 = 5\%$ (Hypoxia induced)
+        
+        ---
+        **Phase 1 & 2: Growth and MMModel Hypoxia Acceleration**
+        By lowering dissolved oxygen to 5%, we calculate the resulting biogenesis acceleration using the inverted Hill equation:
+        """)
+        st.latex(r"\lambda_{hyp} = \frac{10^2 + 21^2}{10^2 + 5^2} = \frac{541}{125} = \mathbf{4.32}")
+        st.latex(r"\Phi_{total}(48) = \Phi_{base} \cdot (4.32_{hyp}) \cdot (1.0_{temp}) \cdot (1.0_{pH}) = \mathbf{4.32 \cdot \Phi_{base}}")
+        st.markdown("> *Optimization Result:* Induced hypoxia forces the cells to increase therapeutic EV production flux by **432%** compared to baseline.")
+
+        st.markdown("""
+        **Phase 3: Mitigating Hydrodynamic Shear Stress**
+        Recalculating mechanical stress under safely capped mixing parameters, preserving viability over the extended 48-hour run:
+        """)
+        st.latex(r"\tau_{shear} = 0.1 \cdot (85.5 - 85)^{1.5} \approx \mathbf{0.035\% \text{ h}^{-1}}")
+        st.latex(r"V_{48} = 100\% - \left[ (0.5\% + 0.035\%) \cdot 48 \text{ h} \right] = \mathbf{74.32\%}")
+        st.markdown("> *Diagnostic Result:* Viability is safely maintained at **74.32%**, completely avoiding the Death Cliff.")
+        
+        st.markdown("""
+        **Phase 4: Controlled Impurity Load**
+        Computing the final impurity multiplier ($I_R$) against the massively boosted therapeutic flux:
+        """)
+        st.latex(r"\Phi_{Apoptotic} = \Phi_{total} \cdot \left( \frac{100 - 74.32}{100} \right) \cdot 5 = \mathbf{1.28 \cdot \Phi_{total}} \implies I_R = \mathbf{1.28}")
+
+        st.markdown("""
+        **Phase 5: Optimal Downstream DSP & Yield Performance**
+        With impurities suppressed and viability high, downstream recovery metrics remain mathematically optimal:
+        """)
+        st.latex(r"\eta_{purity} = 0.78 \cdot \left( \frac{1}{1 + (1.28 \cdot 0.05)} \right) = \mathbf{73.3\%}")
+        st.latex(r"\phi_{consistency} = 0.62 \cdot \sqrt{\frac{74.32}{100}} = \mathbf{53.4\%}")
+        st.latex(r"QA_{Score} = \eta_{purity} \cdot \phi_{consistency} = 0.733 \cdot 0.534 = \mathbf{39.1\%}")
+        
+        st.markdown("""
+        > *Final Process Impact:* The Golden Batch produces **4.32x more raw EVs per hour**, runs for **2.5x longer** (48h vs 19h), and successfully clears QA metrics with high functional consistency. 
+        """)
 
 # --- 6. CELL LINE DATABASE ---
 cell_line_db = {
